@@ -47,6 +47,36 @@ npm run dev
 5. 浏览器访问：
 - `http://localhost:3000`
 
+## OpenClaw 接入（作为 Skill）
+
+clawvisual 可以通过 MCP 方式，作为 OpenClaw 的本地/工作区 Skill 接入。
+
+1. 启动 clawvisual 服务：
+
+```bash
+npm install
+cp .env.local.template .env.local
+npm run dev
+```
+
+2. 将本仓库 Skill 安装到 OpenClaw：
+- 把 [skills/clawvisual-mcp](skills/clawvisual-mcp) 复制到以下任一位置：
+  - `<openclaw-workspace>/skills/clawvisual-mcp`（工作区级）
+  - `~/.openclaw/skills/clawvisual-mcp`（本机共享）
+
+3. 配置 Skill 运行环境变量：
+
+```bash
+CLAWVISUAL_MCP_URL=http://localhost:3000/api/mcp
+CLAWVISUAL_API_KEY=<如果开启鉴权则填写>
+```
+
+4. 本地测试 Skill 客户端：
+
+```bash
+npm run skill:clawvisual -- tools
+```
+
 ## 已实现架构（V1 脚手架）
 
 - 框架：Next.js App Router + TypeScript

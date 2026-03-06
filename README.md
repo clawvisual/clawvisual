@@ -49,6 +49,36 @@ npm run dev
 5. Open in browser:
 - `http://localhost:3000`
 
+## OpenClaw Integration (as a Skill)
+
+clawvisual can be integrated into OpenClaw as a workspace/local skill via MCP.
+
+1. Run clawvisual service:
+
+```bash
+npm install
+cp .env.local.template .env.local
+npm run dev
+```
+
+2. Install this skill into OpenClaw:
+- copy [skills/clawvisual-mcp](skills/clawvisual-mcp) to either:
+  - `<openclaw-workspace>/skills/clawvisual-mcp` (workspace scope), or
+  - `~/.openclaw/skills/clawvisual-mcp` (shared local scope)
+
+3. Configure skill runtime env:
+
+```bash
+CLAWVISUAL_MCP_URL=http://localhost:3000/api/mcp
+CLAWVISUAL_API_KEY=<your_clawvisual_api_key_if_enabled>
+```
+
+4. Test the skill client locally:
+
+```bash
+npm run skill:clawvisual -- tools
+```
+
 ## Implemented Architecture (V1 Scaffold)
 
 - Framework: Next.js App Router + TypeScript
