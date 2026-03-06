@@ -1,0 +1,148 @@
+# clawvisual AI
+
+中文文档: [README.zh-CN.md](README.zh-CN.md)
+
+clawvisual AI is an agent-skill pipeline that converts long-form text into short-form carousel/infographic content.
+
+Default output constraints (fast mode):
+- `post_title`: one-sentence hook.
+- `post_caption`: concise body, normalized to 100-300 characters.
+- `hashtags`: 1-5 tags.
+- `slides`: generated visual slides are required (not text-only output).
+  - each slide should include `image_url` and `visual_prompt`
+  - cover slide (`slide_id: 1`) must prioritize first-glance clarity and hook strength
+
+## Screenshots
+
+<p>
+  <img src="screenshots/start.png" alt="start" width="24%" />
+  <img src="screenshots/thinking.png" alt="thinking" width="24%" />
+  <img src="screenshots/control.png" alt="control" width="24%" />
+  <img src="screenshots/res.png" alt="res" width="24%" />
+</p>
+
+## Quick Start (Web)
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create local env file:
+
+```bash
+cp .env.local.template .env.local
+```
+
+3. Fill required keys in `.env.local` at least:
+- `LLM_API_URL`
+- `LLM_API_KEY`
+- `LLM_MODEL`
+
+4. Start dev server:
+
+```bash
+npm run dev
+```
+
+5. Open in browser:
+- `http://localhost:3000`
+
+## Implemented Architecture (V1 Scaffold)
+
+- Framework: Next.js App Router + TypeScript
+- API:
+  - `POST /api/v1/convert` starts a 16-skill chain and returns `job_id`
+  - `GET /api/v1/jobs/:id` returns status/progress/result
+  - `POST /api/mcp` JSON-RPC MCP endpoint (`initialize`, `tools/list`, `tools/call`)
+  - `GET /api/openapi.json` exports OpenAPI schema
+- Skill system: `src/lib/skills` contains 16 atomic async skills
+- Prompt templates: `src/lib/prompts/index.ts`
+- Orchestration: `src/lib/orchestrator.ts`
+- Queue:
+  - Local in-memory job queue for immediate development
+- API key validation: `src/lib/auth/api-key.ts`
+
+## Directory Layout
+
+- `src/app/page.tsx`: clawvisual dashboard UI
+- `src/app/api/v1/convert/route.ts`: conversion entrypoint
+- `src/app/api/v1/jobs/[id]/route.ts`: job status endpoint
+- `src/app/api/openapi.json/route.ts`: OpenAPI export
+- `src/lib/types`: standard interfaces and context object
+- `src/lib/skills`: 16 atomic skill modules
+
+## Environment Variables
+
+Existing keys are reusable. Current scaffold reads:
+
+- `LLM_API_URL`
+- `LLM_API_KEY`
+- `LLM_MODEL`
+- `LLM_TIMEOUT_MS` (optional, default `25000`)
+- `LLM_COPY_FALLBACK_MODEL` (optional, default `google/gemini-2.5-flash`)
+- `LLM_COPY_POLISH_MODEL` (optional, default `openai/gpt-5.1-mini`)
+- `GEMINI_API_KEY`
+- `NANO_BANANA_MODEL`
+- `NANO_BANANA_TIMEOUT_MS` (optional, default `60000`)
+- `NANO_BANANA_TRANSIENT_RETRY_MAX` (optional, default `2`)
+- `NANO_BANANA_RETRY_BASE_DELAY_MS` (optional, default `450`)
+- `QUALITY_LOOP_ENABLED` (optional, default `true`)
+- `QUALITY_AUDIT_THRESHOLD` (optional, default `78`)
+- `QUALITY_IMAGE_COVER_THRESHOLD` (optional, default `85`)
+- `QUALITY_IMAGE_INNER_THRESHOLD` (optional, default `78`)
+- `QUALITY_COVER_FIRST_GLANCE_THRESHOLD` (optional, default `82`)
+- `QUALITY_COVER_NOVELTY_THRESHOLD` (optional, default `80`)
+- `QUALITY_COVER_CANDIDATE_COUNT` (optional, default `1`)
+- `QUALITY_MAX_COPY_ROUNDS` (optional, default `1`)
+- `QUALITY_MAX_IMAGE_ROUNDS` (optional, default `0`)
+- `QUALITY_MAX_EXTRA_IMAGES` (optional, default `1`)
+- `QUALITY_IMAGE_LOOP_MAX_MS` (optional, default `120000`)
+- `QUALITY_IMAGE_AUDIT_SCOPE` (optional, `cover` or `all`, default `cover`)
+- `PIPELINE_MODE` (optional, `fast` or `full`, default `fast`)
+- `PIPELINE_MAX_DURATION_MS` (optional, default `300000`)
+- `PIPELINE_ENABLE_SOURCE_INTEL` (optional, default `false` in fast mode)
+- `PIPELINE_ENABLE_STORYBOARD_QUALITY` (optional, default `false` in fast mode)
+- `PIPELINE_ENABLE_STYLE_RECOMMENDER` (optional, default `false` in fast mode)
+- `PIPELINE_ENABLE_ATTENTION_FIXER` (optional, default `false` in fast mode)
+- `PIPELINE_ENABLE_POST_COPY_QUALITY` (optional, default `false` in fast mode)
+- `PIPELINE_ENABLE_FINAL_AUDIT` (optional, default `false` in fast mode)
+
+Runtime observability:
+- Thinking & Actions event timeline now includes per-step token usage deltas (`in/out/total`) when provider `usage` is returned.
+- Final `skill_logs` includes `llm_usage_summary` for total request-level token aggregation.
+- `OPENROUTER_API_KEY`
+- `TAVILY_API_KEY`
+- `SERPER_API_KEY`
+- `JINA_API_KEY`
+
+API security controls:
+
+- `CLAWVISUAL_API_KEYS` comma-separated accepted keys
+- `CLAWVISUAL_ALLOW_NO_KEY` default `true` in local development
+
+## Notes
+
+- This project includes async conversion pipeline + revision engine + MCP-compatible JSON-RPC endpoint.
+- Real integrations (Flux/Midjourney, Redis/BullMQ worker process, PostgreSQL persistence, satori rendering) are left as plug-in points.
+
+## MCP Tools
+
+`POST /api/mcp` supports:
+
+- `convert`: create conversion job
+- `job_status`: fetch current job status/result
+- `revise`: create revision job for copy/image changes
+- `regenerate_cover`: regenerate cover via job revision or direct prompt image call
+
+## Skill Template
+
+Reusable external skill package:
+
+- [skills/clawvisual-mcp/SKILL.md](skills/clawvisual-mcp/SKILL.md)
+- [skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs](skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs)
+
+Convenience command:
+
+- `npm run skill:clawvisual -- tools`

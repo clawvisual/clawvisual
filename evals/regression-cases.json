@@ -1,0 +1,62 @@
+{
+  "cases": [
+    {
+      "id": "business_growth_cover",
+      "description": "Business growth topic should keep strong cover and enough hashtags.",
+      "output": {
+        "post_title": "Most teams are not slow. Their distribution is broken.",
+        "hashtags": ["#growth", "#contentstrategy", "#distribution", "#marketing", "#founders", "#socialmedia"],
+        "slides": [
+          { "slide_id": 1, "is_cover": true, "visual_prompt": "Cover strategy with high contrast and conflict split." },
+          { "slide_id": 2, "is_cover": false, "visual_prompt": "Data-focused process flow with clear hierarchy." },
+          { "slide_id": 3, "is_cover": false, "visual_prompt": "Before-after comparison with single subject." },
+          { "slide_id": 4, "is_cover": false, "visual_prompt": "Metric trend with readable negative space." },
+          { "slide_id": 5, "is_cover": false, "visual_prompt": "Action framework with structured icons." }
+        ],
+        "source_evidence": [
+          { "url": "https://example.com/a", "credibilityScore": 84 },
+          { "url": "https://example.com/b", "credibilityScore": 78 }
+        ],
+        "trend_signals": [
+          { "tag": "growth", "score": 82 },
+          { "tag": "contentstrategy", "score": 80 }
+        ]
+      },
+      "rules": {
+        "min_slides": 5,
+        "min_hashtags": 5,
+        "max_hashtags": 8,
+        "requires_cover_keyword": ["contrast", "hook", "cover"],
+        "min_source_evidence": 2,
+        "min_trend_signals": 2
+      }
+    },
+    {
+      "id": "quote_mode_readability",
+      "description": "Quote mode output should avoid overloaded tags and keep cover focus.",
+      "output": {
+        "post_title": "The hidden cost is not writing. It is being ignored.",
+        "hashtags": ["#copywriting", "#creator", "#socialmedia", "#attention", "#branding"],
+        "slides": [
+          { "slide_id": 1, "is_cover": true, "visual_prompt": "Cover headline intent readable in under 0.3 seconds with dramatic contrast." },
+          { "slide_id": 2, "is_cover": false, "visual_prompt": "Minimal scene with top negative space for quote overlay." },
+          { "slide_id": 3, "is_cover": false, "visual_prompt": "Single dominant subject and low-noise background." }
+        ],
+        "source_evidence": [
+          { "url": "https://example.com/c", "credibilityScore": 70 }
+        ],
+        "trend_signals": [
+          { "tag": "creator", "score": 72 }
+        ]
+      },
+      "rules": {
+        "min_slides": 3,
+        "min_hashtags": 5,
+        "max_hashtags": 8,
+        "requires_cover_keyword": ["0.3", "contrast", "readable"],
+        "min_source_evidence": 1,
+        "min_trend_signals": 1
+      }
+    }
+  ]
+}
