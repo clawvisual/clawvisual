@@ -7,7 +7,7 @@ Turn a long article or URL into a social-ready carousel with hooks, captions, ha
 clawvisual AI is built as an agent-skill pipeline and can also be called through an MCP endpoint by other agents and workflows.
 
 <p>
-  <img src="screenshots/readme-ui-thread.png" alt="clawvisual thread result UI" width="100%" />
+  <img src="screenshots/readme-ui-thread-en.png" alt="clawvisual thread result UI" width="100%" />
 </p>
 
 ## Why It Feels Different
