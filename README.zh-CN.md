@@ -38,6 +38,13 @@ cp .env.local.template .env.local
 - `LLM_API_KEY`
 - `LLM_MODEL`
 
+本地开发的重要说明：
+- `.env.local.template` 现在默认把 `CLAWVISUAL_API_KEYS` 留空
+- 本地请求默认不需要 `x-api-key`，只有你显式配置了 `CLAWVISUAL_API_KEYS` 才需要带
+- 如果你启用了 API Key 校验，请在 `x-api-key` 里传入同一个已配置值
+- 如果你想测试真实图片生成，而不是占位渐变图/SVG，还需要设置可用的 `GEMINI_API_KEY` 和 `NANO_BANANA_MODEL`
+- 如果当前 provider 不支持 `LLM_COPY_POLISH_MODEL`，文案 polish 阶段可能会被跳过
+
 4. 启动开发服务器：
 
 ```bash
@@ -46,6 +53,45 @@ npm run dev
 
 5. 浏览器访问：
 - `http://localhost:3000`
+
+如果 `3000` 已被占用，Next.js 会自动切到别的端口，比如 `3001`。请以终端里实际显示的端口为准。
+
+## 最小冒烟测试
+
+执行 `npm run dev` 之后，建议先确认服务健康，再测试完整 UI 流程。
+
+1. 打开 OpenAPI：
+
+```bash
+curl http://localhost:3000/api/openapi.json
+```
+
+2. 列出 MCP tools：
+
+```bash
+curl -X POST http://localhost:3000/api/mcp \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+3. 创建一个转换任务：
+
+```bash
+curl -X POST http://localhost:3000/api/v1/convert \
+  -H 'content-type: application/json' \
+  --data '{
+    "input_text": "Open source projects grow faster when onboarding is simple and the value is visible on first use.",
+    "max_slides": 4
+  }'
+```
+
+4. 持续轮询返回的 `status_url`，直到 `status` 变成 `completed` 或 `failed`
+
+首次运行时的预期行为：
+- 接口会先快速返回 `202`，任务异步执行
+- 在 `fast` 模式下，一些质量环节显示 `skipped:fast_mode` 是正常行为
+- 如果外部模型或图片能力没有完整配置，部分质量或图片步骤可能退化或走回退路径
+- 如果 `NANO_BANANA_MODEL` 仍然保留模板占位值，图片生成可能会反复重试，最后回退到占位输出
 
 ## OpenClaw 接入（作为 Skill）
 
@@ -70,6 +116,10 @@ npm run dev
 CLAWVISUAL_MCP_URL=http://localhost:3000/api/mcp
 CLAWVISUAL_API_KEY=<如果开启鉴权则填写>
 ```
+
+如果开发服务器实际跑在 `3001` 或其他端口，这里的 `CLAWVISUAL_MCP_URL` 也要同步修改。
+
+如果你显式配置了 `CLAWVISUAL_API_KEYS`，这里的 `CLAWVISUAL_API_KEY` 也应该设置为其中一个可接受的值。
 
 4. 本地测试 Skill 客户端：
 
@@ -173,3 +223,17 @@ API 安全控制：
 快捷命令：
 
 - `npm run skill:clawvisual -- tools`
+
+## 常见本地问题
+
+- `Missing x-api-key`
+  - 原因：你显式启用了 `CLAWVISUAL_API_KEYS`
+  - 处理：带上 `x-api-key`，或者清空 `CLAWVISUAL_API_KEYS`
+
+- MCP 客户端连错服务
+  - 原因：`npm run dev` 自动切到了 `3001`，但客户端默认还在请求 `http://localhost:3000/api/mcp`
+  - 处理：把 `CLAWVISUAL_MCP_URL` 改成真实端口
+
+- `dev` 或 `build` 出现 Next.js workspace root 警告
+  - 原因：仓库上层还存在其他 lockfile，Next.js 推断了更高一级的 workspace root
+  - 处理：在 `next.config.ts` 里设置 `turbopack.root`，或者移除无关的上层 lockfile

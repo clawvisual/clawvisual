@@ -40,6 +40,13 @@ cp .env.local.template .env.local
 - `LLM_API_KEY`
 - `LLM_MODEL`
 
+Important local-dev note:
+- `.env.local.template` now leaves `CLAWVISUAL_API_KEYS` empty by default.
+- Local requests do not require `x-api-key` unless you explicitly configure `CLAWVISUAL_API_KEYS`.
+- If you enable API-key validation, send the same configured value in the `x-api-key` header.
+- For real image generation instead of fallback gradients/SVGs, also set a valid `GEMINI_API_KEY` and `NANO_BANANA_MODEL`.
+- If `LLM_COPY_POLISH_MODEL` is unavailable on your provider, the copy-polish stage may be skipped.
+
 4. Start dev server:
 
 ```bash
@@ -48,6 +55,45 @@ npm run dev
 
 5. Open in browser:
 - `http://localhost:3000`
+
+If `3000` is already occupied, Next.js will move to another port such as `3001`. Use the actual port shown in the terminal.
+
+## Quick Smoke Test
+
+After `npm run dev`, confirm the service is healthy before testing the full UI.
+
+1. Open OpenAPI:
+
+```bash
+curl http://localhost:3000/api/openapi.json
+```
+
+2. List MCP tools:
+
+```bash
+curl -X POST http://localhost:3000/api/mcp \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+3. Create a conversion job:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/convert \
+  -H 'content-type: application/json' \
+  --data '{
+    "input_text": "Open source projects grow faster when onboarding is simple and the value is visible on first use.",
+    "max_slides": 4
+  }'
+```
+
+4. Poll the returned `status_url` until `status` becomes `completed` or `failed`.
+
+Expected first-run behavior:
+- The job should be accepted immediately and return `202`.
+- In `fast` mode, several quality stages are intentionally reported as `skipped:fast_mode`.
+- Without fully working external model/image credentials, some quality/image steps may degrade or fall back.
+- Leaving `NANO_BANANA_MODEL` as the template placeholder can trigger image-generation retries and fallback placeholder outputs.
 
 ## OpenClaw Integration (as a Skill)
 
@@ -72,6 +118,10 @@ npm run dev
 CLAWVISUAL_MCP_URL=http://localhost:3000/api/mcp
 CLAWVISUAL_API_KEY=<your_clawvisual_api_key_if_enabled>
 ```
+
+If the dev server starts on `3001` or another port, update `CLAWVISUAL_MCP_URL` accordingly.
+
+If you explicitly configure `CLAWVISUAL_API_KEYS`, set `CLAWVISUAL_API_KEY` to one of those accepted values.
 
 4. Test the skill client locally:
 
@@ -176,3 +226,17 @@ Reusable external skill package:
 Convenience command:
 
 - `npm run skill:clawvisual -- tools`
+
+## Common Local Issues
+
+- `Missing x-api-key`
+  - Cause: API-key validation was explicitly enabled by setting `CLAWVISUAL_API_KEYS`.
+  - Fix: send `x-api-key`, or clear `CLAWVISUAL_API_KEYS` for local no-auth mode.
+
+- MCP client points to the wrong service
+  - Cause: `npm run dev` switched to `3001`, but the client default is still `http://localhost:3000/api/mcp`.
+  - Fix: set `CLAWVISUAL_MCP_URL` to the real local port.
+
+- Next.js workspace-root warning during `dev` or `build`
+  - Cause: another lockfile exists above this repo, so Next.js infers a higher workspace root.
+  - Fix: set `turbopack.root` in `next.config.ts` or remove the unrelated parent lockfile.
