@@ -2,23 +2,49 @@
 
 中文文档: [README.zh-CN.md](README.zh-CN.md)
 
-clawvisual AI is an agent-skill pipeline that converts long-form text into short-form carousel/infographic content.
+Turn a long article or URL into a social-ready carousel with hooks, captions, hashtags, slide copy, and generated visuals.
 
-Default output constraints (fast mode):
-- `post_title`: one-sentence hook.
-- `post_caption`: concise body, normalized to 100-300 characters.
-- `hashtags`: 1-5 tags.
-- `slides`: generated visual slides are required (not text-only output).
-  - each slide should include `image_url` and `visual_prompt`
-  - cover slide (`slide_id: 1`) must prioritize first-glance clarity and hook strength
-
-## Screenshots
+clawvisual AI is built as an agent-skill pipeline and can also be called through an MCP endpoint by other agents and workflows.
 
 <p>
-  <img src="screenshots/start.png" alt="start" width="24%" />
-  <img src="screenshots/thinking.png" alt="thinking" width="24%" />
-  <img src="screenshots/control.png" alt="control" width="24%" />
-  <img src="screenshots/res.png" alt="res" width="24%" />
+  <img src="screenshots/readme-ui-thread.png" alt="clawvisual thread result UI" width="100%" />
+</p>
+
+## Why It Feels Different
+
+- URL or long-form text in, finished carousel structure out
+- Generates real slide images and prompts, not just text summaries
+- Async job pipeline with progress events, revisions, and downloadable output
+- MCP-compatible, so other agents can call it as a tool
+
+Default output constraints (fast mode):
+- `post_title`: one-sentence hook
+- `post_caption`: concise body, normalized to 100-300 characters
+- `hashtags`: 1-5 tags
+- `slides`: generated visual slides are required, not text-only output
+  - each slide should include `image_url` and `visual_prompt`
+  - cover slide (`slide_id: 1`) should prioritize first-glance clarity and hook strength
+
+## Real Example
+
+Tested locally against this public article:
+- [How to Fix Your Entire Life in 1 Year](https://letters.thedankoe.com/p/how-to-fix-your-entire-life-in-1)
+
+Generated output (`output_language: en-US`, `max_slides: 4`):
+
+```json
+{
+  "post_title": "Why 90% of New Year’s resolutions fail (and how to fix yours).",
+  "post_caption": "Most people don't actually want to change—they just want to impress others. True transformation isn't about discipline; it's about digging into your psyche to uncover what you actually want.",
+  "hashtags": ["#Psychology", "#AI", "#Productivity", "#MindsetShift", "#IdentityDesign"]
+}
+```
+
+Generated slide previews:
+
+<p>
+  <img src="screenshots/readme-cover-en.png" alt="Generated cover slide" width="49%" />
+  <img src="screenshots/readme-slide-2-en.png" alt="Generated second slide" width="49%" />
 </p>
 
 ## Quick Start (Web)
@@ -40,6 +66,13 @@ cp .env.local.template .env.local
 - `LLM_API_KEY`
 - `LLM_MODEL`
 
+Important local-dev note:
+- `.env.local.template` now leaves `CLAWVISUAL_API_KEYS` empty by default.
+- Local requests do not require `x-api-key` unless you explicitly configure `CLAWVISUAL_API_KEYS`.
+- If you enable API-key validation, send the same configured value in the `x-api-key` header.
+- For real image generation instead of fallback gradients/SVGs, also set a valid `GEMINI_API_KEY` and `NANO_BANANA_MODEL`.
+- If `LLM_COPY_POLISH_MODEL` is unavailable on your provider, the copy-polish stage may be skipped.
+
 4. Start dev server:
 
 ```bash
@@ -48,6 +81,45 @@ npm run dev
 
 5. Open in browser:
 - `http://localhost:3000`
+
+If `3000` is already occupied, Next.js will move to another port such as `3001`. Use the actual port shown in the terminal.
+
+## Quick Smoke Test
+
+After `npm run dev`, confirm the service is healthy before testing the full UI.
+
+1. Open OpenAPI:
+
+```bash
+curl http://localhost:3000/api/openapi.json
+```
+
+2. List MCP tools:
+
+```bash
+curl -X POST http://localhost:3000/api/mcp \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+3. Create a conversion job:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/convert \
+  -H 'content-type: application/json' \
+  --data '{
+    "input_text": "Open source projects grow faster when onboarding is simple and the value is visible on first use.",
+    "max_slides": 4
+  }'
+```
+
+4. Poll the returned `status_url` until `status` becomes `completed` or `failed`.
+
+Expected first-run behavior:
+- The job should be accepted immediately and return `202`.
+- In `fast` mode, several quality stages are intentionally reported as `skipped:fast_mode`.
+- Without fully working external model/image credentials, some quality/image steps may degrade or fall back.
+- Leaving `NANO_BANANA_MODEL` as the template placeholder can trigger image-generation retries and fallback placeholder outputs.
 
 ## OpenClaw Integration (as a Skill)
 
@@ -72,6 +144,10 @@ npm run dev
 CLAWVISUAL_MCP_URL=http://localhost:3000/api/mcp
 CLAWVISUAL_API_KEY=<your_clawvisual_api_key_if_enabled>
 ```
+
+If the dev server starts on `3001` or another port, update `CLAWVISUAL_MCP_URL` accordingly.
+
+If you explicitly configure `CLAWVISUAL_API_KEYS`, set `CLAWVISUAL_API_KEY` to one of those accepted values.
 
 4. Test the skill client locally:
 
@@ -176,3 +252,17 @@ Reusable external skill package:
 Convenience command:
 
 - `npm run skill:clawvisual -- tools`
+
+## Common Local Issues
+
+- `Missing x-api-key`
+  - Cause: API-key validation was explicitly enabled by setting `CLAWVISUAL_API_KEYS`.
+  - Fix: send `x-api-key`, or clear `CLAWVISUAL_API_KEYS` for local no-auth mode.
+
+- MCP client points to the wrong service
+  - Cause: `npm run dev` switched to `3001`, but the client default is still `http://localhost:3000/api/mcp`.
+  - Fix: set `CLAWVISUAL_MCP_URL` to the real local port.
+
+- Next.js workspace-root warning during `dev` or `build`
+  - Cause: another lockfile exists above this repo, so Next.js infers a higher workspace root.
+  - Fix: set `turbopack.root` in `next.config.ts` or remove the unrelated parent lockfile.

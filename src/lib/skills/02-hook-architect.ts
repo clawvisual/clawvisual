@@ -60,7 +60,9 @@ export async function skill02HookArchitect(context: ConversionContext): Promise<
     .filter(Boolean)
     .slice(0, 5);
   const fallback = fallbackHooks(topic);
-  const merged = Array.from(new Set([...hooks, ...memoryHints.hookHints, ...fallback])).slice(0, 5);
+  // Keep current-input fallbacks ahead of memory hints so prior successful hooks
+  // never override the active topic when LLM output is missing or low quality.
+  const merged = Array.from(new Set([...hooks, ...fallback, ...memoryHints.hookHints])).slice(0, 5);
 
   return {
     ...context,
