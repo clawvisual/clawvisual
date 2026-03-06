@@ -2,23 +2,49 @@
 
 中文文档: [README.zh-CN.md](README.zh-CN.md)
 
-clawvisual AI is an agent-skill pipeline that converts long-form text into short-form carousel/infographic content.
+Turn a long article or URL into a social-ready carousel with hooks, captions, hashtags, slide copy, and generated visuals.
 
-Default output constraints (fast mode):
-- `post_title`: one-sentence hook.
-- `post_caption`: concise body, normalized to 100-300 characters.
-- `hashtags`: 1-5 tags.
-- `slides`: generated visual slides are required (not text-only output).
-  - each slide should include `image_url` and `visual_prompt`
-  - cover slide (`slide_id: 1`) must prioritize first-glance clarity and hook strength
-
-## Screenshots
+clawvisual AI is built as an agent-skill pipeline and can also be called through an MCP endpoint by other agents and workflows.
 
 <p>
-  <img src="screenshots/start.png" alt="start" width="24%" />
-  <img src="screenshots/thinking.png" alt="thinking" width="24%" />
-  <img src="screenshots/control.png" alt="control" width="24%" />
-  <img src="screenshots/res.png" alt="res" width="24%" />
+  <img src="screenshots/readme-ui-thread.png" alt="clawvisual thread result UI" width="100%" />
+</p>
+
+## Why It Feels Different
+
+- URL or long-form text in, finished carousel structure out
+- Generates real slide images and prompts, not just text summaries
+- Async job pipeline with progress events, revisions, and downloadable output
+- MCP-compatible, so other agents can call it as a tool
+
+Default output constraints (fast mode):
+- `post_title`: one-sentence hook
+- `post_caption`: concise body, normalized to 100-300 characters
+- `hashtags`: 1-5 tags
+- `slides`: generated visual slides are required, not text-only output
+  - each slide should include `image_url` and `visual_prompt`
+  - cover slide (`slide_id: 1`) should prioritize first-glance clarity and hook strength
+
+## Real Example
+
+Tested locally against this public article:
+- [How to Fix Your Entire Life in 1 Year](https://letters.thedankoe.com/p/how-to-fix-your-entire-life-in-1)
+
+Generated output (`output_language: en-US`, `max_slides: 4`):
+
+```json
+{
+  "post_title": "Why 90% of New Year’s resolutions fail (and how to fix yours).",
+  "post_caption": "Most people don't actually want to change—they just want to impress others. True transformation isn't about discipline; it's about digging into your psyche to uncover what you actually want.",
+  "hashtags": ["#Psychology", "#AI", "#Productivity", "#MindsetShift", "#IdentityDesign"]
+}
+```
+
+Generated slide previews:
+
+<p>
+  <img src="screenshots/readme-cover-en.png" alt="Generated cover slide" width="49%" />
+  <img src="screenshots/readme-slide-2-en.png" alt="Generated second slide" width="49%" />
 </p>
 
 ## Quick Start (Web)
