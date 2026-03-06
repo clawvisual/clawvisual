@@ -283,12 +283,15 @@ textarea {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: #111827;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  display: grid;
-  place-items: center;
+  display: block;
+  overflow: hidden;
+}
+
+.vf-brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .vf-brand-text {

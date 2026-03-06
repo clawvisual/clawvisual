@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import {
-  Aperture,
   ArrowUp,
   Check,
   ChevronLeft,
@@ -1557,14 +1557,14 @@ export default function HomePage() {
               onClick={() => setSidebarCollapsed(false)}
             >
               <span className="vf-brand-logo">
-                <Aperture size={16} />
+                <Image src="/logo.png" alt="clawvisual logo" width={28} height={28} className="vf-brand-logo-img" />
               </span>
             </button>
           ) : (
             <div className="vf-sidebar-head">
               <div className="vf-sidebar-brand" aria-label="clawvisual AI">
                 <span className="vf-brand-logo">
-                  <Aperture size={16} />
+                  <Image src="/logo.png" alt="clawvisual logo" width={28} height={28} className="vf-brand-logo-img" />
                 </span>
                 <span className="vf-brand-text">clawvisual AI</span>
               </div>

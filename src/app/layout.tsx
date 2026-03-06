@@ -16,6 +16,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "clawvisual AI",
   description: "Agent skill pipeline for long-form to carousel conversion",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
