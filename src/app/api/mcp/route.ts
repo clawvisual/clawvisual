@@ -27,7 +27,7 @@ const convertArgsSchema = z.object({
   input_text: z.string().min(20),
   max_slides: z.number().int().min(1).max(8).optional(),
   target_slides: z.number().int().min(1).max(8).optional(),
-  aspect_ratios: z.array(z.enum(["4:5", "9:16", "1:1"])).default(["4:5", "1:1"]),
+  aspect_ratios: z.array(z.enum(["4:5", "9:16", "1:1", "16:9"])).default(["4:5", "1:1"]),
   style_preset: z.string().default("auto"),
   tone: z.string().default("auto"),
   generation_mode: z.enum(["standard", "quote_slides"]).default("quote_slides"),
@@ -60,7 +60,7 @@ const regenerateCoverArgsSchema = z.object({
   job_id: z.string().min(1).optional(),
   instruction: z.string().trim().min(1).optional(),
   prompt: z.string().trim().min(8).optional(),
-  aspect_ratio: z.enum(["4:5", "9:16", "1:1"]).default("4:5"),
+  aspect_ratio: z.enum(["4:5", "9:16", "1:1", "16:9"]).default("4:5"),
   negative_prompt: z.string().optional(),
   mode: z.enum(["same_prompt_new_seed", "reprompt"]).default("reprompt"),
   seed: z.number().int().optional()
@@ -92,7 +92,7 @@ const TOOL_DEFINITIONS = [
         },
         aspect_ratios: {
           type: "array",
-          items: { type: "string", enum: ["4:5", "9:16", "1:1"] },
+          items: { type: "string", enum: ["4:5", "9:16", "1:1", "16:9"] },
           default: ["4:5", "1:1"]
         },
         style_preset: { type: "string", default: "auto" },
@@ -147,7 +147,7 @@ const TOOL_DEFINITIONS = [
         job_id: { type: "string" },
         instruction: { type: "string" },
         prompt: { type: "string", minLength: 8 },
-        aspect_ratio: { type: "string", enum: ["4:5", "9:16", "1:1"], default: "4:5" },
+        aspect_ratio: { type: "string", enum: ["4:5", "9:16", "1:1", "16:9"], default: "4:5" },
         negative_prompt: { type: "string" },
         mode: { type: "string", enum: ["same_prompt_new_seed", "reprompt"], default: "reprompt" },
         seed: { type: "integer" }

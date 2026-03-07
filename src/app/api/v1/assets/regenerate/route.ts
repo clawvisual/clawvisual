@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 const regenerateSchema = z.object({
   prompt: z.string().min(8, "prompt is too short"),
-  aspect_ratio: z.enum(["4:5", "9:16", "1:1"]).default("4:5"),
+  aspect_ratio: z.enum(["4:5", "9:16", "1:1", "16:9"]).default("4:5"),
   negative_prompt: z.string().optional()
 });
 

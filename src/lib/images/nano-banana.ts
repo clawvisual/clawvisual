@@ -35,7 +35,8 @@ export const NEGATIVE_PROMPT_WITH_TEXT_ON_IMAGE = [
 const RATIO_DIMENSIONS: Record<AspectRatio, { width: number; height: number }> = {
   "4:5": { width: 1200, height: 1500 },
   "1:1": { width: 1200, height: 1200 },
-  "9:16": { width: 1080, height: 1920 }
+  "9:16": { width: 1080, height: 1920 },
+  "16:9": { width: 1600, height: 900 }
 };
 
 const OPENROUTER_RATE_LIMIT_FALLBACK_MODEL = "google/gemini-2.5-flash-image";

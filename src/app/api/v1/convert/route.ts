@@ -11,7 +11,7 @@ const convertSchema = z.object({
   input_text: z.string().min(20, "input_text should be at least 20 chars"),
   max_slides: z.number().int().min(1).max(8).optional(),
   target_slides: z.number().int().min(1).max(8).optional(),
-  aspect_ratios: z.array(z.enum(["4:5", "9:16", "1:1"])).default(["4:5", "1:1"]),
+  aspect_ratios: z.array(z.enum(["4:5", "9:16", "1:1", "16:9"])).default(["4:5", "1:1"]),
   style_preset: z.string().default("auto"),
   tone: z.string().default("auto"),
   output_language: z.string().trim().default(DEFAULT_LANGUAGE).transform((value) => normalizeLanguage(value)),

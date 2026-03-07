@@ -12,10 +12,10 @@ Usage:
 Commands:
   initialize
   tools
-  convert --input <text> [--lang <code>] [--slides <1-8>] [--session <uuid>] [--review auto|required]
+  convert --input <text> [--lang <code>] [--slides <1-8>] [--ratio 4:5|1:1|9:16|16:9] [--session <uuid>] [--review auto|required]
   status --job <job_id>
   revise --job <job_id> --instruction <text> [--intent rewrite_copy_style|regenerate_cover|regenerate_slides]
-  regenerate-cover (--job <job_id> [--instruction <text>] | --prompt <text>) [--ratio 4:5|1:1|9:16]
+  regenerate-cover (--job <job_id> [--instruction <text>] | --prompt <text>) [--ratio 4:5|1:1|9:16|16:9]
   call --name <tool_name> --args <json>
 `);
 }
@@ -128,11 +128,16 @@ async function main() {
     }
 
     const slides = Number(args.slides ?? 8);
+    const ratio =
+      args.ratio === "1:1" || args.ratio === "9:16" || args.ratio === "16:9"
+        ? args.ratio
+        : "4:5";
+
     const payload = {
       session_id: typeof args.session === "string" ? args.session : undefined,
       input_text: args.input,
       max_slides: Number.isFinite(slides) ? Math.max(1, Math.min(8, Math.round(slides))) : 8,
-      aspect_ratios: ["4:5", "1:1", "9:16"],
+      aspect_ratios: [ratio],
       style_preset: typeof args.style === "string" ? args.style : "auto",
       tone: typeof args.tone === "string" ? args.tone : "auto",
       generation_mode: typeof args.mode === "string" ? args.mode : "quote_slides",
@@ -180,7 +185,7 @@ async function main() {
   }
 
   if (command === "regenerate-cover") {
-    const ratio = args.ratio === "1:1" || args.ratio === "9:16" ? args.ratio : "4:5";
+    const ratio = args.ratio === "1:1" || args.ratio === "9:16" || args.ratio === "16:9" ? args.ratio : "4:5";
 
     if (args.job && typeof args.job === "string") {
       const result = await callTool("regenerate_cover", {

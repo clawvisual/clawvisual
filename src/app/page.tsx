@@ -30,6 +30,14 @@ import {
 } from "@/lib/i18n/languages";
 
 type JobStatus = "queued" | "running" | "completed" | "failed";
+type AspectRatio = "4:5" | "9:16" | "1:1" | "16:9";
+
+const ASPECT_RATIO_OPTIONS: Array<{ value: AspectRatio; label: string }> = [
+  { value: "4:5", label: "Portrait 4:5" },
+  { value: "9:16", label: "Story 9:16" },
+  { value: "1:1", label: "Square 1:1" },
+  { value: "16:9", label: "Landscape 16:9" }
+];
 
 type ConvertResponse = {
   job_id: string;
@@ -120,7 +128,7 @@ type JobResponse = {
       status: "running" | "completed" | "failed";
       output_preview: string;
     }>;
-    aspect_ratio: "4:5" | "9:16" | "1:1";
+    aspect_ratio: AspectRatio;
   };
 };
 
@@ -302,6 +310,7 @@ const menuItems = [
 export default function HomePage() {
   const [inputText, setInputText] = useState("");
   const [outputLanguage, setOutputLanguage] = useState<SupportedLanguageCode>(DEFAULT_LANGUAGE);
+  const [primaryAspectRatio, setPrimaryAspectRatio] = useState<AspectRatio>("4:5");
   const [sessionId, setSessionId] = useState("");
   const [sessionJobs, setSessionJobs] = useState<JobResponse[]>([]);
   const [activeJobId, setActiveJobId] = useState("");
@@ -815,7 +824,7 @@ export default function HomePage() {
           session_id: sessionId || undefined,
           input_text: trimmed,
           max_slides: 8,
-          aspect_ratios: ["4:5", "1:1", "9:16"],
+          aspect_ratios: [primaryAspectRatio],
           style_preset: "auto",
           tone: "auto",
           generation_mode: "quote_slides",
@@ -855,7 +864,7 @@ export default function HomePage() {
       await pollJob(created.status_url, nextSessionId, created.job_id);
       await refreshSessionHistory();
     },
-    [orderedJobs, outputLanguage, pollJob, refreshSessionHistory, removeJob, sessionId, syncUrlWithSession, upsertJob]
+    [orderedJobs, outputLanguage, pollJob, primaryAspectRatio, refreshSessionHistory, removeJob, sessionId, syncUrlWithSession, upsertJob]
   );
 
   const submitInput = async (rawInput: string) => {
@@ -1849,6 +1858,18 @@ export default function HomePage() {
                   {SUPPORTED_LANGUAGE_CODES.map((code) => (
                     <option key={code} value={code}>
                       {LANGUAGE_LABELS[code]}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={primaryAspectRatio}
+                  onChange={(event) => setPrimaryAspectRatio(event.target.value as AspectRatio)}
+                  className="vf-language-select"
+                  aria-label="Aspect ratio"
+                >
+                  {ASPECT_RATIO_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>

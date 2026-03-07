@@ -1,4 +1,4 @@
-export type AspectRatio = "4:5" | "9:16" | "1:1";
+export type AspectRatio = "4:5" | "9:16" | "1:1" | "16:9";
 export type GenerationMode = "standard" | "quote_slides";
 export type PlatformType = "RedBook" | "Twitter" | "Instagram" | "TikTok" | "LinkedIn";
 export type SkillStatus = "running" | "completed" | "failed";
