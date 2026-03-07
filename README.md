@@ -15,6 +15,7 @@ Turn a long article or URL into a social-ready carousel with hooks, captions, ha
 - URL or long-form text in, finished carousel structure out
 - Generates real slide images and prompts, not just text summaries
 - Async job pipeline with progress events, revisions, and downloadable output
+- Supports portrait, square, story, and landscape output ratios
 - MCP-compatible, so other agents can call it as a tool
 
 ## Docs
@@ -27,6 +28,7 @@ Default output constraints (fast mode):
 - `post_title`: one-sentence hook
 - `post_caption`: concise body, normalized to 100-300 characters
 - `hashtags`: 1-5 tags
+- `aspect_ratios`: choose from `4:5`, `1:1`, `9:16`, `16:9`
 - `slides`: generated visual slides are required, not text-only output
   - each slide should include `image_url` and `visual_prompt`
   - cover slide (`slide_id: 1`) should prioritize first-glance clarity and hook strength
@@ -98,6 +100,8 @@ If `3000` is already occupied, Next.js will move to another port such as `3001`.
 4. Review output and optionally run revision actions (`rewrite_copy_style`, `regenerate_cover`, `regenerate_slides`)
 5. Export/download final assets
 
+In the web composer, use the `Aspect ratio` selector to switch between portrait, square, story, and landscape (`16:9`) outputs.
+
 ## Quick Smoke Test
 
 After `npm run dev`, confirm the service is healthy before testing the full UI.
@@ -123,7 +127,8 @@ curl -X POST http://localhost:3000/api/v1/convert \
   -H 'content-type: application/json' \
   --data '{
     "input_text": "Open source projects grow faster when onboarding is simple and the value is visible on first use.",
-    "max_slides": 4
+    "max_slides": 4,
+    "aspect_ratios": ["16:9"]
   }'
 ```
 

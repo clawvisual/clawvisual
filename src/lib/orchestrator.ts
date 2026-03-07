@@ -143,6 +143,7 @@ function normalizeCaptionLength(caption: string, fallbackText: string): string {
 function inferPlatformType(aspectRatio: ConversionRequest["aspectRatios"][number]): ConversionResult["platform_type"] {
   if (aspectRatio === "9:16") return "TikTok";
   if (aspectRatio === "1:1") return "Twitter";
+  if (aspectRatio === "16:9") return "LinkedIn";
   return "Instagram";
 }
 

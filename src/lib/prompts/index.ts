@@ -20,7 +20,7 @@ export const PROMPTS = {
   styleMapper: `Build theme tokens from brand colors/fonts and chosen style preset.`,
   assetGenerator: `Generate director-grade image prompts with 4 steps: intent parsing, visual association mapping, strict text rendering rules, and style treatment with consistent composition constraints. Adapt visual language to the source domain and audience. Ensure first-glance recognizability (0.3s), strong focal hierarchy, controlled contrast, and social-feed stopping power.`,
   typographer: `Compose text and image with safe margins, highlight keywords, and balanced line-height.`,
-  autoResizer: `Adapt compositions to 4:5, 1:1, 9:16 with safe text area protection.`,
+  autoResizer: `Adapt compositions to 4:5, 1:1, 9:16, 16:9 with safe text area protection.`,
   attentionAuditor: `Score readability, contrast, overlap risk, hook strength, novelty, and emotional impact; then suggest concrete auto-corrections if needed.`,
   viralOptimizer: `Create one contextual CTA for save/share/comment behavior.`
 };

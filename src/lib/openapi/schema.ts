@@ -46,7 +46,7 @@ export function createOpenApiDocument() {
             },
             aspect_ratios: {
               type: "array",
-              items: { type: "string", enum: ["4:5", "9:16", "1:1"] },
+              items: { type: "string", enum: ["4:5", "9:16", "1:1", "16:9"] },
               default: ["4:5", "1:1"]
             },
             style_preset: { type: "string", default: "auto" },
@@ -142,7 +142,7 @@ export function createOpenApiDocument() {
           required: ["prompt"],
           properties: {
             prompt: { type: "string" },
-            aspect_ratio: { type: "string", enum: ["4:5", "9:16", "1:1"], default: "4:5" },
+            aspect_ratio: { type: "string", enum: ["4:5", "9:16", "1:1", "16:9"], default: "4:5" },
             negative_prompt: { type: "string" }
           }
         },
@@ -370,7 +370,7 @@ export function createOpenApiDocument() {
                   type: "string",
                   enum: ["RedBook", "Twitter", "Instagram", "TikTok", "LinkedIn"]
                 },
-                aspect_ratio: { type: "string", enum: ["4:5", "9:16", "1:1"] },
+                aspect_ratio: { type: "string", enum: ["4:5", "9:16", "1:1", "16:9"] },
                 slides: {
                   type: "array",
                   items: {
