@@ -405,7 +405,7 @@ function describeStage(stage: string): { title: string; thought: string; action:
     skill_10_auto_resizer: {
       title: "resize formats",
       thought: "Output needs cross-platform ratios for social distribution.",
-      action: "Adapt all slides into 4:5, 1:1, and 9:16 variants."
+      action: "Adapt all slides into 4:5, 1:1, 9:16, and 16:9 variants."
     },
     skill_11_attention_auditor: {
       title: "audit attention",

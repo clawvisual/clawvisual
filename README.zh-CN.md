@@ -13,12 +13,14 @@ clawvisual AI 是一个 Agent + Skills 流水线，用来把长文章或 URL 直
 - 直接吃 URL 或长文本，输出可发布的 carousel 结构
 - 不是只做摘要，而是真的生成 slide 图片和视觉 prompt
 - 有异步任务、进度事件、修订能力和下载输出
+- 已支持竖版、方图、Story 和横版输出，包括 `16:9`
 - 提供 MCP 端点，可以作为其他 agent 的工具能力
 
 默认输出约束（fast 模式）：
 - `post_title`：一句话标题钩子
 - `post_caption`：精简正文，标准化为 100-300 字符
 - `hashtags`：1-5 个标签
+- `aspect_ratios`：可选 `4:5`、`1:1`、`9:16`、`16:9`
 - `slides`：必须生成可用图片页（不是纯文案输出）
   - 每页需包含 `image_url` 与 `visual_prompt`
   - 封面页（`slide_id: 1`）优先保证第一眼识别度与钩子强度
@@ -82,6 +84,8 @@ npm run dev
 
 如果 `3000` 已被占用，Next.js 会自动切到别的端口，比如 `3001`。请以终端里实际显示的端口为准。
 
+Web 输入框下方现在提供 `Aspect ratio` 选择器，可以直接切换竖版、方图、Story 和横版（`16:9`）输出。
+
 ## 最小冒烟测试
 
 执行 `npm run dev` 之后，建议先确认服务健康，再测试完整 UI 流程。
@@ -107,7 +111,8 @@ curl -X POST http://localhost:3000/api/v1/convert \
   -H 'content-type: application/json' \
   --data '{
     "input_text": "Open source projects grow faster when onboarding is simple and the value is visible on first use.",
-    "max_slides": 4
+    "max_slides": 4,
+    "aspect_ratios": ["16:9"]
   }'
 ```
 

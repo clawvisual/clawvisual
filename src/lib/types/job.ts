@@ -102,7 +102,7 @@ export interface JobRecord {
     inputText: string;
     sourceInputText?: string;
     targetSlides: number;
-    aspectRatios: Array<"4:5" | "9:16" | "1:1">;
+    aspectRatios: Array<"4:5" | "9:16" | "1:1" | "16:9">;
     stylePreset: string;
     tone: string;
     outputLanguage: string;
