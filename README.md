@@ -1,21 +1,27 @@
-# clawvisual AI
+# <img src="public/logo.png" alt="clawvisual logo" height="36" style="border-radius:8px; vertical-align:middle;" /> clawvisual AI
 
 中文文档: [README.zh-CN.md](README.zh-CN.md)
 
-Turn a long article or URL into a social-ready carousel with hooks, captions, hashtags, slide copy, and generated visuals.
+clawvisual AI is an open source **URL to social carousel** generator for creators, growth teams, and builders of **agent workflow** automation.
 
-clawvisual AI is built as an agent-skill pipeline and can also be called through an MCP endpoint by other agents and workflows.
+Turn a long article or URL into a social-ready carousel with hooks, captions, hashtags, slide copy, and generated visuals. It runs as an **MCP**-compatible service, so other agents can call it as a reusable skill.
 
 <p>
   <img src="screenshots/readme-ui-thread-en.png" alt="clawvisual thread result UI" width="100%" />
 </p>
 
-## Why It Feels Different
+## Features
 
 - URL or long-form text in, finished carousel structure out
 - Generates real slide images and prompts, not just text summaries
 - Async job pipeline with progress events, revisions, and downloadable output
 - MCP-compatible, so other agents can call it as a tool
+
+## Docs
+
+- [Quickstart Guide for URL to Social Carousel](docs/Quickstart-URL-to-Social-Carousel.md)
+- [MCP Integration Guide for clawvisual](docs/MCP-Integration-Guide-for-clawvisual.md)
+- [Use Cases for Agent Workflow Automation](docs/Use-Cases-Agent-Workflow-Automation.md)
 
 Default output constraints (fast mode):
 - `post_title`: one-sentence hook
@@ -83,6 +89,14 @@ npm run dev
 - `http://localhost:3000`
 
 If `3000` is already occupied, Next.js will move to another port such as `3001`. Use the actual port shown in the terminal.
+
+## Workflow
+
+1. Input URL or long-form text
+2. Run skill pipeline to generate hooks, slide copy, visuals, and hashtags
+3. Poll async job status until completion
+4. Review output and optionally run revision actions (`rewrite_copy_style`, `regenerate_cover`, `regenerate_slides`)
+5. Export/download final assets
 
 ## Quick Smoke Test
 
@@ -154,6 +168,38 @@ If you explicitly configure `CLAWVISUAL_API_KEYS`, set `CLAWVISUAL_API_KEY` to o
 ```bash
 npm run skill:clawvisual -- tools
 ```
+
+## MCP
+
+- Endpoint: `POST /api/mcp`
+- Methods: `initialize`, `tools/list`, `tools/call`
+- Tools: `convert`, `job_status`, `revise`, `regenerate_cover`
+
+## FAQ
+
+### Can I self-host clawvisual?
+
+Yes. This repository is self-hostable with Node.js and environment variables in `.env.local`.
+
+### Can I run batch generation?
+
+Yes. Use API or MCP calls from scripts/workflows and submit multiple conversion jobs asynchronously.
+
+### Can I use this in automation pipelines?
+
+Yes. The MCP interface is designed for automation and agent workflow orchestration.
+
+### Can another agent call clawvisual as a skill?
+
+Yes. Use the `skills/clawvisual-mcp` package and point it to your `CLAWVISUAL_MCP_URL`.
+
+## Roadmap
+
+- Better batch orchestration and queue controls
+- Expanded template/style presets
+- Stronger evaluation cases and regression gates
+- More granular asset export formats
+- Weekly release notes in [GitHub Releases](../../releases)
 
 ## Implemented Architecture (V1 Scaffold)
 

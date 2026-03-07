@@ -1,19 +1,25 @@
 # clawvisual AI
 
-clawvisual AI 是一个 Agent + Skills 流水线，用来把长文章或 URL 直接转换成适合社媒传播的轮播图 / 信息图内容。
+clawvisual AI 是一个开源的 **URL to social carousel** 生成框架，面向创作者、增长团队和自动化场景中的 **agent workflow**。
 
-它不仅能生成标题、caption 和 hashtags，还会给出真正可用的 slide 文案、视觉 prompt、图片结果，并且可以通过 MCP 被其他 agent 调用。
+你可以把长文章或 URL 转成可发布的社媒轮播内容：标题、caption、hashtags、slide 文案和生成图片。它同时支持 **MCP**，可被其他 agent 作为技能调用。
 
 <p>
   <img src="screenshots/readme-ui-thread.png" alt="clawvisual 结果页 UI" width="100%" />
 </p>
 
-## 为什么它更适合做传播内容
+## 功能亮点
 
 - 直接吃 URL 或长文本，输出可发布的 carousel 结构
 - 不是只做摘要，而是真的生成 slide 图片和视觉 prompt
 - 有异步任务、进度事件、修订能力和下载输出
 - 提供 MCP 端点，可以作为其他 agent 的工具能力
+
+## 文档
+
+- [快速上手：URL 转社媒轮播图](docs/Quickstart-URL-to-Social-Carousel.zh-CN.md)
+- [clawvisual 的 MCP 接入指南](docs/MCP-Integration-Guide-for-clawvisual.zh-CN.md)
+- [Agent 工作流自动化使用场景](docs/Use-Cases-Agent-Workflow-Automation.zh-CN.md)
 
 默认输出约束（fast 模式）：
 - `post_title`：一句话标题钩子
@@ -81,6 +87,14 @@ npm run dev
 - `http://localhost:3000`
 
 如果 `3000` 已被占用，Next.js 会自动切到别的端口，比如 `3001`。请以终端里实际显示的端口为准。
+
+## 工作流
+
+1. 输入 URL 或长文本
+2. 运行技能流水线生成 hooks、slide 文案、视觉图和 hashtags
+3. 轮询异步任务状态直到完成
+4. 按需发起修订（`rewrite_copy_style` / `regenerate_cover` / `regenerate_slides`）
+5. 导出下载最终素材
 
 ## 最小冒烟测试
 
@@ -152,6 +166,38 @@ CLAWVISUAL_API_KEY=<如果开启鉴权则填写>
 ```bash
 npm run skill:clawvisual -- tools
 ```
+
+## MCP
+
+- 端点：`POST /api/mcp`
+- 方法：`initialize`、`tools/list`、`tools/call`
+- 工具：`convert`、`job_status`、`revise`、`regenerate_cover`
+
+## FAQ
+
+### 可以自托管吗？
+
+可以。项目支持本地/服务器部署，按 `.env.local` 配置即可运行。
+
+### 支持批量处理吗？
+
+支持。可通过 API 或 MCP 在脚本/工作流中并发提交多个异步任务。
+
+### 能用于自动化流程吗？
+
+可以。MCP 接口就是为自动化和 agent orchestration 设计的。
+
+### 能被其他 agent 作为 skill 调用吗？
+
+可以，直接复用 `skills/clawvisual-mcp` 并配置 `CLAWVISUAL_MCP_URL`。
+
+## 路线图
+
+- 更完善的批处理调度与队列控制
+- 更多模板与风格预设
+- 更强的评测集与回归保障
+- 更细粒度的素材导出格式
+- 持续发布版本与更新说明
 
 ## 已实现架构（V1 脚手架）
 
