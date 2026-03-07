@@ -17,10 +17,12 @@ Default app URL:
 
 ## 2. Set minimum environment variables
 
-At least configure:
-- `LLM_API_URL`
+Configure:
 - `LLM_API_KEY`
-- `LLM_MODEL`
+
+`LLM_API_URL` and `LLM_MODEL` are already defaulted to:
+- `https://openrouter.ai/api/v1/chat/completions`
+- `google/gemini-3-flash-preview`
 
 For real image generation, also set:
 - `GEMINI_API_KEY`

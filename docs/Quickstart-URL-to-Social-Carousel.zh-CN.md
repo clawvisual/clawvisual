@@ -17,10 +17,12 @@ npm run dev
 
 ## 2. 配置最小环境变量
 
-至少配置：
-- `LLM_API_URL`
+请配置：
 - `LLM_API_KEY`
-- `LLM_MODEL`
+
+`LLM_API_URL` 与 `LLM_MODEL` 已默认设置为：
+- `https://openrouter.ai/api/v1/chat/completions`
+- `google/gemini-3-flash-preview`
 
 如果需要真实图片生成，还需配置：
 - `GEMINI_API_KEY`

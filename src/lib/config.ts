@@ -2,7 +2,7 @@ export const appConfig = {
   name: "clawvisual AI",
   version: "0.1.0",
   llm: {
-    apiUrl: process.env.LLM_API_URL ?? "",
+    apiUrl: process.env.LLM_API_URL ?? "https://openrouter.ai/api/v1/chat/completions",
     apiKey: process.env.LLM_API_KEY ?? "",
     model: process.env.LLM_MODEL ?? "google/gemini-3-flash-preview",
     timeoutMs: Number(process.env.LLM_TIMEOUT_MS ?? 25000),

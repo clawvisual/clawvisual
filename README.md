@@ -36,7 +36,7 @@ Default output constraints (fast mode):
 ## Real Example
 
 Tested locally against this public article:
-- [How to Fix Your Entire Life in 1 Year](https://letters.thedankoe.com/p/how-to-fix-your-entire-life-in-1)
+- [How to fix your entire life in 1 day](https://letters.thedankoe.com/p/how-to-fix-your-entire-life-in-1)
 
 Generated output (`output_language: en-US`, `max_slides: 4`):
 
@@ -69,10 +69,12 @@ npm install
 cp .env.local.template .env.local
 ```
 
-3. Fill required keys in `.env.local` at least:
-- `LLM_API_URL`
+3. Fill required key in `.env.local`:
 - `LLM_API_KEY`
-- `LLM_MODEL`
+
+`LLM_API_URL` and `LLM_MODEL` already default to OpenRouter + Gemini Flash:
+- `LLM_API_URL=https://openrouter.ai/api/v1/chat/completions`
+- `LLM_MODEL=google/gemini-3-flash-preview`
 
 Important local-dev note:
 - `.env.local.template` now leaves `CLAWVISUAL_API_KEYS` empty by default.
@@ -234,9 +236,9 @@ Yes. Use the `skills/clawvisual-mcp` package and point it to your `CLAWVISUAL_MC
 
 Existing keys are reusable. Current scaffold reads:
 
-- `LLM_API_URL`
+- `LLM_API_URL` (optional, default `https://openrouter.ai/api/v1/chat/completions`)
 - `LLM_API_KEY`
-- `LLM_MODEL`
+- `LLM_MODEL` (optional, default `google/gemini-3-flash-preview`)
 - `LLM_TIMEOUT_MS` (optional, default `25000`)
 - `LLM_COPY_FALLBACK_MODEL` (optional, default `google/gemini-2.5-flash`)
 - `LLM_COPY_POLISH_MODEL` (optional, default `openai/gpt-5.1-mini`)
