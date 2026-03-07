@@ -13,7 +13,7 @@ clawvisual AI 是一个 Agent + Skills 流水线，用来把长文章或 URL 直
 - 直接吃 URL 或长文本，输出可发布的 carousel 结构
 - 不是只做摘要，而是真的生成 slide 图片和视觉 prompt
 - 有异步任务、进度事件、修订能力和下载输出
-- 已支持竖版、方图、Story 和横版输出，包括 `16:9`
+- 已支持竖版、方图、Story 和横版输出
 - 提供 MCP 端点，可以作为其他 agent 的工具能力
 
 默认输出约束（fast 模式）：

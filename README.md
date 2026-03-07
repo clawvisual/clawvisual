@@ -15,7 +15,7 @@ clawvisual AI is built as an agent-skill pipeline and can also be called through
 - URL or long-form text in, finished carousel structure out
 - Generates real slide images and prompts, not just text summaries
 - Async job pipeline with progress events, revisions, and downloadable output
-- Supports portrait, square, story, and landscape output ratios including `16:9`
+- Supports portrait, square, story, and landscape output ratios
 - MCP-compatible, so other agents can call it as a tool
 
 Default output constraints (fast mode):
