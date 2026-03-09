@@ -115,7 +115,7 @@ clawvisual status --job <job_id>
 ```
 
 `clawvisual initialize` 在 `CLAWVISUAL_MCP_URL` 指向 localhost 时会自动拉起本地服务，并输出可访问的 Web URL；之后可继续执行 `clawvisual xxx` 命令。
-`clawvisual status` 会校验服务指纹（必须是 `clawvisual-mcp`），避免同端口其他 MCP 服务造成误判。
+`clawvisual status` 会校验服务指纹（必须是 `clawvisual`），避免同端口其他 MCP 服务造成误判。
 `clawvisual set/get/unset/config` 会把 CLI 配置写入 `~/.clawvisual/config.json`（key 大小写不敏感，例如 `clawvisual set clawvisual_llm_api_key ...`）。
 
 CLI 相关环境变量：
@@ -210,9 +210,9 @@ npm run dev
 ```
 
 2. 将本仓库 Skill 安装到 OpenClaw：
-- 把 [skills/clawvisual-mcp](skills/clawvisual-mcp) 复制到以下任一位置：
-  - `<openclaw-workspace>/skills/clawvisual-mcp`（工作区级）
-  - `~/.openclaw/skills/clawvisual-mcp`（本机共享）
+- 把 [skills/clawvisual](skills/clawvisual) 复制到以下任一位置：
+  - `<openclaw-workspace>/skills/clawvisual`（工作区级）
+  - `~/.openclaw/skills/clawvisual`（本机共享）
 
 3. 配置 Skill 运行环境变量：
 
@@ -253,7 +253,7 @@ npm run skill:clawvisual -- tools
 
 ### 能被其他 agent 作为 skill 调用吗？
 
-可以，直接复用 `skills/clawvisual-mcp` 并配置 `CLAWVISUAL_MCP_URL`。
+可以，直接复用 `skills/clawvisual` 并配置 `CLAWVISUAL_MCP_URL`。
 
 ## 路线图
 
@@ -353,8 +353,8 @@ API 安全控制：
 
 可复用的外部技能包：
 
-- [skills/clawvisual-mcp/SKILL.md](skills/clawvisual-mcp/SKILL.md)
-- [skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs](skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs)
+- [skills/clawvisual/SKILL.md](skills/clawvisual/SKILL.md)
+- [skills/clawvisual/scripts/clawvisual-client.mjs](skills/clawvisual/scripts/clawvisual-client.mjs)
 
 快捷命令：
 

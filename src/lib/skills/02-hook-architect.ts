@@ -5,11 +5,11 @@ import type { ConversionContext } from "@/lib/types/skills";
 
 function fallbackHooks(topic: string): string[] {
   return [
-    `Why most teams fail at this: ${topic.slice(0, 60)}`,
-    "What if your current strategy is upside down?",
-    "The fastest path to results nobody explains",
-    "Steal this framework before your competitors do",
-    "One shift that changes everything in 30 days"
+    `Core idea in one glance: ${topic.slice(0, 60)}`,
+    "A practical framework you can apply this week",
+    "The shortest path from signal to action",
+    "Use this playbook before the next planning cycle",
+    "One change that compounds over time"
   ];
 }
 

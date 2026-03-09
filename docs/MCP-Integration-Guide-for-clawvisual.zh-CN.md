@@ -51,8 +51,8 @@ curl -X POST http://localhost:3000/api/mcp \
 ## OpenClaw Skill 接入
 
 使用：
-- `skills/clawvisual-mcp/SKILL.md`
-- `skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs`
+- `skills/clawvisual/SKILL.md`
+- `skills/clawvisual/scripts/clawvisual-client.mjs`
 
 配置：
 - `CLAWVISUAL_MCP_URL`

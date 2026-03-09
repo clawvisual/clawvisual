@@ -111,7 +111,7 @@ function normalizeToolNames(payload) {
 }
 
 function isClawvisualInitialize(payload) {
-  return payload?.payload?.result?.serverInfo?.name === "clawvisual-mcp";
+  return payload?.payload?.result?.serverInfo?.name === "clawvisual";
 }
 
 async function probeServiceIdentity() {
@@ -157,7 +157,7 @@ async function ensureServerReady() {
   }
   if (initialProbe.reachable && !initialProbe.clawvisual) {
     throw new Error(
-      `MCP endpoint is reachable at ${BASE_URL}, but it is not clawvisual-mcp (${initialProbe.reason}). Set CLAWVISUAL_MCP_URL to your clawvisual service.`
+      `MCP endpoint is reachable at ${BASE_URL}, but it is not clawvisual (${initialProbe.reason}). Set CLAWVISUAL_MCP_URL to your clawvisual service.`
     );
   }
 
@@ -194,7 +194,7 @@ async function ensureServerReady() {
     }
     if (probe.reachable && !probe.clawvisual) {
       throw new Error(
-        `MCP endpoint at ${BASE_URL} responded but is not clawvisual-mcp (${probe.reason}). Another service may be using this port.`
+        `MCP endpoint at ${BASE_URL} responded but is not clawvisual (${probe.reason}). Another service may be using this port.`
       );
     }
   }

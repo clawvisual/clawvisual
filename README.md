@@ -117,7 +117,7 @@ clawvisual status --job <job_id>
 ```
 
 `clawvisual initialize` will auto-start a local service when `CLAWVISUAL_MCP_URL` points to localhost. It prints the web URL after startup, then you can continue with `clawvisual xxx` commands.
-`clawvisual status` checks service identity (must be `clawvisual-mcp`) and avoids false positives from other local MCP servers on the same port.
+`clawvisual status` checks service identity (must be `clawvisual`) and avoids false positives from other local MCP servers on the same port.
 `clawvisual set/get/unset/config` stores local CLI config at `~/.clawvisual/config.json` (keys are case-insensitive, e.g. `clawvisual set clawvisual_llm_api_key ...`).
 
 CLI environment variables:
@@ -212,9 +212,9 @@ npm run dev
 ```
 
 2. Install this skill into OpenClaw:
-- copy [skills/clawvisual-mcp](skills/clawvisual-mcp) to either:
-  - `<openclaw-workspace>/skills/clawvisual-mcp` (workspace scope), or
-  - `~/.openclaw/skills/clawvisual-mcp` (shared local scope)
+- copy [skills/clawvisual](skills/clawvisual) to either:
+  - `<openclaw-workspace>/skills/clawvisual` (workspace scope), or
+  - `~/.openclaw/skills/clawvisual` (shared local scope)
 
 3. Configure skill runtime env:
 
@@ -255,7 +255,7 @@ Yes. The MCP interface is designed for automation and agent workflow orchestrati
 
 ### Can another agent call clawvisual as a skill?
 
-Yes. Use the `skills/clawvisual-mcp` package and point it to your `CLAWVISUAL_MCP_URL`.
+Yes. Use the `skills/clawvisual` package and point it to your `CLAWVISUAL_MCP_URL`.
 
 ## Roadmap
 
@@ -356,8 +356,8 @@ API security controls:
 
 Reusable external skill package:
 
-- [skills/clawvisual-mcp/SKILL.md](skills/clawvisual-mcp/SKILL.md)
-- [skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs](skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs)
+- [skills/clawvisual/SKILL.md](skills/clawvisual/SKILL.md)
+- [skills/clawvisual/scripts/clawvisual-client.mjs](skills/clawvisual/scripts/clawvisual-client.mjs)
 
 Convenience command:
 

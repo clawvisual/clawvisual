@@ -192,7 +192,8 @@ export async function GET(
   }
 
   const result = job.result;
-  const bundleBase = sanitizeName(result.post_title || `job_${id}`, `job_${id.slice(0, 8)}`);
+  // Keep download names stable and neutral; avoid coupling archive names to generated hook titles.
+  const bundleBase = sanitizeName(`clawvisual-job-${id.slice(0, 8)}`, `job_${id.slice(0, 8)}`);
   const rootDir = mkdtempSync(join(tmpdir(), "clawvisual-download-"));
   const bundleDir = join(rootDir, bundleBase);
 

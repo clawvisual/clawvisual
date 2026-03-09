@@ -367,7 +367,7 @@ export async function POST(request: Request) {
           tools: {}
         },
         serverInfo: {
-          name: "clawvisual-mcp",
+          name: "clawvisual",
           version: appConfig.version
         }
       }
@@ -408,7 +408,7 @@ export async function POST(request: Request) {
 
 export async function GET() {
   return NextResponse.json({
-    name: "clawvisual-mcp",
+    name: "clawvisual",
     endpoint: "/api/mcp",
     transport: "JSON-RPC over HTTP POST",
     methods: ["initialize", "tools/list", "tools/call"]

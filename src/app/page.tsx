@@ -1298,6 +1298,13 @@ export default function HomePage() {
 
   const latestEventId = activeJob?.events?.[activeJob.events.length - 1]?.id;
 
+  const normalizeResultTitle = useCallback((title: string) => {
+    const normalized = String(title || "").replace(/\s+/g, " ").trim();
+    if (!normalized) return "Untitled Result";
+    const legacyPrefix = /^why\s+most\s+teams\s+fail\s+at\s+this:\s*/i;
+    return normalized.replace(legacyPrefix, "").trim() || "Untitled Result";
+  }, []);
+
   const renderResultContent = (jobItem: JobResponse) => {
     if (!jobItem.result) {
       return (
@@ -1310,6 +1317,7 @@ export default function HomePage() {
     }
 
     const result = jobItem.result;
+    const displayTitle = normalizeResultTitle(result.post_title);
     const audit = auditByJob[jobItem.job_id];
     const isAuditLoading = !!auditLoadingByJob[jobItem.job_id];
     const auditError = auditErrorByJob[jobItem.job_id];
@@ -1317,7 +1325,7 @@ export default function HomePage() {
 
     return (
       <div className="vf-result-content">
-        <h2>{result.post_title}</h2>
+        <h2>{displayTitle}</h2>
         <p className="vf-result-source">Platform: {result.platform_type}</p>
         <p className="vf-result-source">Aspect ratio: {result.aspect_ratio}</p>
 
@@ -1878,7 +1886,7 @@ export default function HomePage() {
                             renderResultContent(turn)
                           ) : (
                             <p className="vf-empty-result">
-                              {turn.result ? turn.result.post_title : "clawvisual is thinking..."}
+                              {turn.result ? normalizeResultTitle(turn.result.post_title) : "clawvisual is thinking..."}
                             </p>
                           )}
                         </article>

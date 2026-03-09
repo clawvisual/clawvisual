@@ -4,10 +4,10 @@
   "description": "URL or long-form text to social carousel CLI and MCP client.",
   "license": "MIT",
   "bin": {
-    "clawvisual": "skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs"
+    "clawvisual": "skills/clawvisual/scripts/clawvisual-client.mjs"
   },
   "files": [
-    "skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs",
+    "skills/clawvisual/scripts/clawvisual-client.mjs",
     "src",
     "public",
     "next.config.ts",
@@ -27,7 +27,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "eval:regression": "node scripts/eval-regression.mjs",
-    "skill:clawvisual": "node skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs"
+    "skill:clawvisual": "node skills/clawvisual/scripts/clawvisual-client.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.43.0",

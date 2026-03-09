@@ -34,7 +34,7 @@ npm run skill:clawvisual -- initialize
 ## Commands
 
 - `clawvisual initialize`: probe/start local service and print Web URL.
-- `clawvisual status`: check service identity (must be `clawvisual-mcp`).
+- `clawvisual status`: check service identity (must be `clawvisual`).
 - `clawvisual tools`: list MCP tools.
 - `clawvisual convert --input <text_or_url> [--slides auto|1-8] [--ratio 4:5|1:1|9:16|16:9] [--lang <code>]`
 - `clawvisual status --job <job_id>`: query job state and result.
