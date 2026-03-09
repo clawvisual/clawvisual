@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   ArrowUp,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -13,7 +14,6 @@ import {
   Mail,
   MoreHorizontal,
   PanelLeftClose,
-  Paperclip,
   PencilLine,
   Rocket,
   Settings,
@@ -38,6 +38,8 @@ const ASPECT_RATIO_OPTIONS: Array<{ value: AspectRatio; label: string }> = [
   { value: "1:1", label: "Square 1:1" },
   { value: "16:9", label: "Landscape 16:9" }
 ];
+
+const SLIDE_COUNT_OPTIONS = ["auto", "1", "2", "3", "4", "5", "6", "7", "8"] as const;
 
 type ConvertResponse = {
   job_id: string;
@@ -299,6 +301,20 @@ function resolveLanguageFromBrowser(): SupportedLanguageCode {
   return DEFAULT_LANGUAGE;
 }
 
+function parseSlideCountInput(value: string): number | undefined | null {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized || normalized === "auto") {
+    return undefined;
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 8) {
+    return null;
+  }
+
+  return parsed;
+}
+
 const menuItems = [
   { label: "New Session", icon: Sparkles, active: true },
   // { label: "Agent Sessions", icon: Bot },
@@ -311,6 +327,10 @@ export default function HomePage() {
   const [inputText, setInputText] = useState("");
   const [outputLanguage, setOutputLanguage] = useState<SupportedLanguageCode>(DEFAULT_LANGUAGE);
   const [primaryAspectRatio, setPrimaryAspectRatio] = useState<AspectRatio>("4:5");
+  const [slideCountInput, setSlideCountInput] = useState("auto");
+  const [slideCountMenuOpen, setSlideCountMenuOpen] = useState(false);
+  const [slideCountMenuPlacement, setSlideCountMenuPlacement] = useState<"down" | "up">("down");
+  const [slideCountMenuMaxHeight, setSlideCountMenuMaxHeight] = useState(260);
   const [sessionId, setSessionId] = useState("");
   const [sessionJobs, setSessionJobs] = useState<JobResponse[]>([]);
   const [activeJobId, setActiveJobId] = useState("");
@@ -353,6 +373,8 @@ export default function HomePage() {
   const isConversationMode = orderedJobs.length > 0 || loading || !!error || Boolean(sessionId);
   const isNewConversation = !isConversationMode;
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const slideCountControlRef = useRef<HTMLDivElement | null>(null);
+  const slideCountMenuRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const carouselViewportRef = useRef<HTMLDivElement | null>(null);
   const restoredFromUrlRef = useRef(false);
@@ -380,6 +402,51 @@ export default function HomePage() {
       document.removeEventListener("mousedown", onDocClick);
     };
   }, [accountMenuOpen]);
+
+  useEffect(() => {
+    if (!slideCountMenuOpen) return;
+
+    const onDocClick = (event: MouseEvent) => {
+      if (!slideCountControlRef.current?.contains(event.target as Node)) {
+        setSlideCountMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onDocClick);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+    };
+  }, [slideCountMenuOpen]);
+
+  useEffect(() => {
+    if (!slideCountMenuOpen) return;
+
+    const updateMenuPlacement = () => {
+      const controlRect = slideCountControlRef.current?.getBoundingClientRect();
+      if (!controlRect) return;
+
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const spaceBelow = viewportHeight - controlRect.bottom;
+      const spaceAbove = controlRect.top;
+      const estimatedMenuHeight = slideCountMenuRef.current?.offsetHeight ?? 280;
+
+      const nextPlacement: "down" | "up" =
+        spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow ? "up" : "down";
+      setSlideCountMenuPlacement(nextPlacement);
+
+      const available = nextPlacement === "down" ? spaceBelow - 12 : spaceAbove - 12;
+      setSlideCountMenuMaxHeight(Math.max(120, Math.floor(available)));
+    };
+
+    updateMenuPlacement();
+    window.addEventListener("resize", updateMenuPlacement);
+    window.addEventListener("scroll", updateMenuPlacement, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPlacement);
+      window.removeEventListener("scroll", updateMenuPlacement, true);
+    };
+  }, [slideCountMenuOpen]);
 
   useEffect(() => {
     if (!historyMenuSessionId) return;
@@ -813,7 +880,7 @@ export default function HomePage() {
   );
 
   const runConvertRequest = useCallback(
-    async (trimmed: string, options?: { replaceOptimisticJobId?: string }) => {
+    async (trimmed: string, options?: { replaceOptimisticJobId?: string; maxSlides?: number }) => {
       const optimisticTurn = Math.max(0, ...orderedJobs.map((item) => item.turn_index)) + 1;
       const response = await fetch("/api/v1/convert", {
         method: "POST",
@@ -823,7 +890,7 @@ export default function HomePage() {
         body: JSON.stringify({
           session_id: sessionId || undefined,
           input_text: trimmed,
-          max_slides: 8,
+          max_slides: options?.maxSlides,
           aspect_ratios: [primaryAspectRatio],
           style_preset: "auto",
           tone: "auto",
@@ -870,6 +937,11 @@ export default function HomePage() {
   const submitInput = async (rawInput: string) => {
     const trimmed = rawInput.trim();
     if (!trimmed) return;
+    const slideCount = parseSlideCountInput(slideCountInput);
+    if (slideCount === null) {
+      setError("Slide count must be auto or a number between 1 and 8.");
+      return;
+    }
 
     setError("");
     setLoading(true);
@@ -895,7 +967,7 @@ export default function HomePage() {
             removeJob(routed.__optimistic_job_id);
           }
           if (trimmed.length >= 20) {
-            await runConvertRequest(trimmed);
+            await runConvertRequest(trimmed, { maxSlides: slideCount });
             return;
           }
           setLoading(false);
@@ -905,13 +977,14 @@ export default function HomePage() {
 
         if (routed.action === "full_regenerate") {
           await runConvertRequest(routed.regenerate_input_text || trimmed, {
-            replaceOptimisticJobId: routed.__optimistic_job_id
+            replaceOptimisticJobId: routed.__optimistic_job_id,
+            maxSlides: slideCount
           });
           return;
         }
       }
 
-      await runConvertRequest(trimmed);
+      await runConvertRequest(trimmed, { maxSlides: slideCount });
     } catch (caughtError) {
       setLoading(false);
       setError(caughtError instanceof Error ? caughtError.message : "Unknown error");
@@ -1846,9 +1919,7 @@ export default function HomePage() {
 
             <div className="vf-composer-bottom">
               <div className="vf-toolbar-left">
-                <button type="button" className="vf-tool-btn" aria-label="Attach">
-                  <Paperclip size={15} />
-                </button>
+                {/* Attachment tool is intentionally hidden in current UI scope. */}
                 <select
                   value={outputLanguage}
                   onChange={(event) => setOutputLanguage(normalizeLanguage(event.target.value))}
@@ -1873,6 +1944,55 @@ export default function HomePage() {
                     </option>
                   ))}
                 </select>
+                <div className="vf-slide-count-control" ref={slideCountControlRef}>
+                  <span className="vf-slide-count-caption">Slides</span>
+                  <input
+                    value={slideCountInput}
+                    onChange={(event) => setSlideCountInput(event.target.value)}
+                    onBlur={(event) => {
+                      const parsed = parseSlideCountInput(event.target.value);
+                      if (parsed == null) {
+                        setSlideCountInput("auto");
+                        return;
+                      }
+                      setSlideCountInput(String(parsed));
+                    }}
+                    className="vf-language-select vf-slide-count-input"
+                    aria-label="Slide count"
+                    placeholder="Slide count"
+                  />
+                  <button
+                    type="button"
+                    className="vf-slide-count-toggle"
+                    aria-label="Open slide count options"
+                    onClick={() => setSlideCountMenuOpen((prev) => !prev)}
+                  >
+                    <ChevronDown size={13} />
+                  </button>
+                  {slideCountMenuOpen ? (
+                    <div
+                      ref={slideCountMenuRef}
+                      className={`vf-slide-count-menu ${slideCountMenuPlacement === "up" ? "is-up" : ""}`}
+                      style={{ maxHeight: `${slideCountMenuMaxHeight}px` }}
+                      role="listbox"
+                      aria-label="Slide count options"
+                    >
+                      {SLIDE_COUNT_OPTIONS.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          className={`vf-slide-count-option ${slideCountInput.trim().toLowerCase() === option ? "is-active" : ""}`}
+                          onClick={() => {
+                            setSlideCountInput(option);
+                            setSlideCountMenuOpen(false);
+                          }}
+                        >
+                          {option === "auto" ? "auto (LLM decides)" : `${option} slides`}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               <div className="vf-toolbar-right">

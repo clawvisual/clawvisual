@@ -35,7 +35,8 @@ const convertArgsSchema = z.object({
   review_mode: z.enum(["auto", "required"]).default("auto")
 }).transform((value) => ({
   ...value,
-  max_slides: value.max_slides ?? value.target_slides ?? 8
+  // When omitted, conversion runs in auto slide-count mode.
+  max_slides: value.max_slides ?? value.target_slides
 }));
 
 const jobStatusArgsSchema = z.object({
@@ -80,14 +81,12 @@ const TOOL_DEFINITIONS = [
           type: "integer",
           minimum: 1,
           maximum: 8,
-          default: 8,
-          description: "Maximum slide count. System auto-selects final slide count up to this cap."
+          description: "Maximum slide count (1-8). Omit to let the system choose automatically."
         },
         target_slides: {
           type: "integer",
           minimum: 1,
           maximum: 8,
-          default: 8,
           description: "Deprecated alias of max_slides for backward compatibility."
         },
         aspect_ratios: {

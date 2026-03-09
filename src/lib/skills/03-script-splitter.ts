@@ -205,7 +205,11 @@ const getSkill03Objective = (insights: string[], maxSlides: number, recommendedS
 };
 
 export async function skill03ScriptSplitter(context: ConversionContext): Promise<ConversionContext> {
-  const maxSlides = clampNumber(context.request.targetSlides, 1, 8);
+  const requestedSlideCount = Number.isFinite(context.request.targetSlides)
+    ? clampNumber(Number(context.request.targetSlides), 1, 8)
+    : undefined;
+  const autoSlideCount = requestedSlideCount == null;
+  const maxSlides = requestedSlideCount ?? 8;
   const isQuoteMode = context.request.generationMode === "quote_slides";
   const maxWordsPerSlide = isQuoteMode ? 14 : 28;
   const maxCharsPerSlide = isQuoteMode ? 64 : 86;
@@ -261,7 +265,9 @@ export async function skill03ScriptSplitter(context: ConversionContext): Promise
     ? storyboard
     : fallbackStoryboard(context.corePoints, recommendedSlides, maxWordsPerSlide, maxCharsPerSlide);
   const backupStoryboard = fallbackStoryboard(context.corePoints, maxSlides, maxWordsPerSlide, maxCharsPerSlide);
-  const desiredCount = Math.min(maxSlides, Math.max(recommendedSlides, finalStoryboard.length || 1));
+  const desiredCount = autoSlideCount
+    ? clampNumber(finalStoryboard.length || recommendedSlides, 1, maxSlides)
+    : Math.min(maxSlides, Math.max(recommendedSlides, finalStoryboard.length || 1));
   const uniqueStoryboard = mergeUniqueStoryboard(finalStoryboard, backupStoryboard, desiredCount);
 
   const languageSafeStoryboard = await enforceStoryboardLanguage({

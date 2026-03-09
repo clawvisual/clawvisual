@@ -40,10 +40,12 @@ function fallbackDistill(inputText: string, target: number): string[] {
 }
 
 export async function skill01Distiller(context: ConversionContext): Promise<ConversionContext> {
-  const desiredSlides = clampNumber(context.request.targetSlides, 1, 8);
+  const requestedSlides = Number.isFinite(context.request.targetSlides)
+    ? clampNumber(Number(context.request.targetSlides), 1, 8)
+    : 8;
   const inputChars = context.request.inputText.replace(/\s+/g, "").length;
   const estimatedByLength = clampNumber(Math.ceil(inputChars / 240), 1, 8);
-  const target = clampNumber(Math.min(desiredSlides, estimatedByLength), 1, 8);
+  const target = clampNumber(Math.min(requestedSlides, estimatedByLength), 1, 8);
 
   const llmResult = await callSkillLlmJson<{ core_points?: string[]; corePoints?: string[] }>({
     skill: "distiller",

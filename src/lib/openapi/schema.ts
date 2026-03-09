@@ -33,14 +33,12 @@ export function createOpenApiDocument() {
               type: "integer",
               minimum: 1,
               maximum: 8,
-              default: 8,
-              description: "Maximum slide count. System auto-selects final slide count up to this cap."
+              description: "Maximum slide count (1-8). Omit to let the system choose automatically."
             },
             target_slides: {
               type: "integer",
               minimum: 1,
               maximum: 8,
-              default: 8,
               deprecated: true,
               description: "Deprecated alias of max_slides for backward compatibility."
             },

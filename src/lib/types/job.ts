@@ -101,7 +101,7 @@ export interface JobRecord {
   payload: {
     inputText: string;
     sourceInputText?: string;
-    targetSlides: number;
+    targetSlides?: number;
     aspectRatios: Array<"4:5" | "9:16" | "1:1" | "16:9">;
     stylePreset: string;
     tone: string;

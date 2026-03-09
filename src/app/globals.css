@@ -716,6 +716,82 @@ textarea {
   box-shadow: none;
 }
 
+.vf-slide-count-input {
+  width: 104px;
+  padding-right: 28px;
+}
+
+.vf-slide-count-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vf-slide-count-caption {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.vf-slide-count-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #6b7280;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.vf-slide-count-toggle:hover {
+  background: #f3f4f6;
+}
+
+.vf-slide-count-menu {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 170px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.12);
+  padding: 4px;
+  display: grid;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.vf-slide-count-menu.is-up {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.vf-slide-count-option {
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #111;
+  text-align: left;
+  padding: 0 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.vf-slide-count-option:hover,
+.vf-slide-count-option.is-active {
+  background: #eef1f5;
+}
+
 .vf-result-panel {
   margin-top: 14px;
   border: 1px solid var(--line);

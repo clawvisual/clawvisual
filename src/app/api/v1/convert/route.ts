@@ -20,7 +20,8 @@ const convertSchema = z.object({
 }).transform((value) => ({
   ...value,
   // Keep backward compatibility: support either max_slides or target_slides.
-  max_slides: value.max_slides ?? value.target_slides ?? 8
+  // When omitted, pipeline runs in auto mode and chooses slide count dynamically.
+  max_slides: value.max_slides ?? value.target_slides
 }));
 
 export async function POST(request: Request) {

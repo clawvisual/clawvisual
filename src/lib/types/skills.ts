@@ -109,7 +109,7 @@ export interface TrendSignal {
 
 export interface ConversionRequest {
   inputText: string;
-  targetSlides: number;
+  targetSlides?: number;
   aspectRatios: AspectRatio[];
   brand: BrandConfig;
   tone: string;
