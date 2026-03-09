@@ -1,107 +1,80 @@
-# clawvisual MCP Skill
+---
+name: clawvisual
+description: URL or long-form text to social carousel generator via local CLI + MCP endpoint.
+metadata: {"clawdbot":{"emoji":"🖼️","requires":{"bins":["clawvisual"]},"install":[{"id":"npm","kind":"npm","package":"clawvisual","bins":["clawvisual"],"label":"Install clawvisual (npm)"}]}}
+---
 
-Use this skill to call a deployed clawvisual service through its MCP JSON-RPC endpoint.
+# clawvisual
 
-## Purpose
+Use clawvisual as a callable skill for agent workflows. It can auto-start a local web/MCP service and expose stable CLI commands for generation and job polling.
 
-Provide reusable operations for:
-- Long-text to short carousel conversion
-- Job status polling
-- Revision requests
-- Cover regeneration
+## Quick start
 
-This skill is designed for external agents/workflows that want to treat clawvisual as a callable capability.
+```bash
+npm install -g clawvisual
+clawvisual set CLAWVISUAL_LLM_API_KEY "your_openrouter_key"
+clawvisual initialize
+clawvisual convert --input "https://example.com/article" --slides auto
+clawvisual status --job <job_id>
+```
 
-## Prerequisites
-
-Set environment variables:
-
-- `CLAWVISUAL_MCP_URL` (default: `http://localhost:3000/api/mcp`)
-- `CLAWVISUAL_API_KEY` (required when API key validation is enabled)
-
-## CLI Entrypoint
-
-Script path:
-
-`skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs`
-
-Recommended command:
-
-`npm run skill:clawvisual -- <command> [flags]`
-
-## Commands
-
-### 1. Initialize
+For local repo usage, you can also run:
 
 ```bash
 npm run skill:clawvisual -- initialize
 ```
 
-### 2. List tools
+## What it does
+
+- Convert URL or direct long-form text into social carousel output.
+- Provide job-based async workflow (`convert` -> `status --job`).
+- Support revision operations (`revise`, `regenerate-cover`).
+- Expose MCP JSON-RPC tools for OpenClaw and other agent runtimes.
+
+## Commands
+
+- `clawvisual initialize`: probe/start local service and print Web URL.
+- `clawvisual status`: check service identity (must be `clawvisual-mcp`).
+- `clawvisual tools`: list MCP tools.
+- `clawvisual convert --input <text_or_url> [--slides auto|1-8] [--ratio 4:5|1:1|9:16|16:9] [--lang <code>]`
+- `clawvisual status --job <job_id>`: query job state and result.
+- `clawvisual revise --job <job_id> --instruction <text> [--intent rewrite_copy_style|regenerate_cover|regenerate_slides]`
+- `clawvisual regenerate-cover (--job <job_id> [--instruction <text>] | --prompt <text>) [--ratio 4:5|1:1|9:16|16:9]`
+- `clawvisual call --name <tool_name> --args <json>`: raw tool invocation.
+
+## Config
+
+Optional local config file:
+
+- `~/.clawvisual/config.json`
+
+Manage config with CLI:
 
 ```bash
-npm run skill:clawvisual -- tools
+clawvisual set CLAWVISUAL_LLM_API_KEY "your_key"
+clawvisual get CLAWVISUAL_LLM_API_KEY
+clawvisual config
+clawvisual unset CLAWVISUAL_LLM_API_KEY
 ```
 
-### 3. Convert
+Supported keys:
 
-```bash
-npm run skill:clawvisual -- convert \
-  --input "Paste long text or URL here" \
-  --lang zh-CN \
-  --slides 8 \
-  --review required
-```
+- `CLAWVISUAL_LLM_API_KEY` (alias: `LLM_API_KEY`)
+- `CLAWVISUAL_LLM_API_URL` (alias: `LLM_API_URL`)
+- `CLAWVISUAL_LLM_MODEL` (alias: `LLM_MODEL`)
+- `CLAWVISUAL_MCP_URL` (alias: `MCP_URL`)
+- `CLAWVISUAL_API_KEY`
 
-### 4. Job status
+When auto-starting local service, `CLAWVISUAL_LLM_*` values are mapped to runtime `LLM_*` envs.
 
-```bash
-npm run skill:clawvisual -- status --job <job_id>
-```
+## Workflow pattern
 
-### 5. Revise
+1. `initialize`
+2. `convert`
+3. Poll `status --job <job_id>` until completion
+4. Optional `revise` / `regenerate-cover`
+5. Poll revised job with `status --job`
 
-```bash
-npm run skill:clawvisual -- revise \
-  --job <job_id> \
-  --intent rewrite_copy_style \
-  --instruction "Make tone sharper and reduce fluff"
-```
+## Output contract
 
-### 6. Regenerate cover
-
-By existing job:
-
-```bash
-npm run skill:clawvisual -- regenerate-cover \
-  --job <job_id> \
-  --instruction "Stronger first-glance hook"
-```
-
-By direct prompt:
-
-```bash
-npm run skill:clawvisual -- regenerate-cover \
-  --prompt "Dramatic split-screen contrast, bold focal subject, high readability"
-```
-
-### 7. Generic tool call
-
-```bash
-npm run skill:clawvisual -- call \
-  --name convert \
-  --args '{"input_text":"...","output_language":"en-US"}'
-```
-
-## Workflow Pattern
-
-Typical automation loop:
-
-1. `convert`
-2. Poll `status` until `completed|failed`
-3. Optional `revise` / `regenerate-cover`
-4. Poll revised job `status`
-
-## Output
-
-The client prints structured JSON to stdout so upstream workflows can parse deterministically.
+All commands return JSON to stdout for deterministic parsing by upstream agents.

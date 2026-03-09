@@ -93,6 +93,62 @@ npm run dev
 
 如果 `3000` 已被占用，Next.js 会自动切到别的端口，比如 `3001`。请以终端里实际显示的端口为准。
 
+## CLI（npm -g）
+
+全局安装 CLI：
+
+```bash
+npm install -g clawvisual
+```
+
+安装后可直接执行：
+
+```bash
+clawvisual set CLAWVISUAL_LLM_API_KEY "your_openrouter_key"
+# 可选
+clawvisual set CLAWVISUAL_LLM_MODEL "google/gemini-3-flash-preview"
+clawvisual initialize
+clawvisual status
+clawvisual tools
+clawvisual convert --input "在这里粘贴长文本或 URL" --slides auto
+clawvisual status --job <job_id>
+```
+
+`clawvisual initialize` 在 `CLAWVISUAL_MCP_URL` 指向 localhost 时会自动拉起本地服务，并输出可访问的 Web URL；之后可继续执行 `clawvisual xxx` 命令。
+`clawvisual status` 会校验服务指纹（必须是 `clawvisual-mcp`），避免同端口其他 MCP 服务造成误判。
+`clawvisual set/get/unset/config` 会把 CLI 配置写入 `~/.clawvisual/config.json`（key 大小写不敏感，例如 `clawvisual set clawvisual_llm_api_key ...`）。
+
+CLI 相关环境变量：
+- `CLAWVISUAL_MCP_URL`（默认：`http://localhost:3000/api/mcp`）
+- `CLAWVISUAL_API_KEY`（仅在开启 API Key 校验时需要）
+- `CLAWVISUAL_LLM_API_KEY` / `CLAWVISUAL_LLM_API_URL` / `CLAWVISUAL_LLM_MODEL`（CLI 层别名，会映射为服务端 `LLM_*` 环境变量）
+
+## Docker
+
+构建镜像：
+
+```bash
+docker build -t clawvisual:1.0.0 .
+```
+
+运行容器：
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e LLM_API_KEY=your_openrouter_api_key \
+  -e GEMINI_API_KEY=your_gemini_api_key \
+  -e NANO_BANANA_MODEL=gemini-3.1-flash-image-preview \
+  clawvisual:1.0.0
+```
+
+GHCR 发布后的运行示例：
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e LLM_API_KEY=your_openrouter_api_key \
+  ghcr.io/<owner>/clawvisual:<tag>
+```
+
 ## 工作流
 
 1. 输入 URL 或长文本

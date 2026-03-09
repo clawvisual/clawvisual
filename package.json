@@ -1,7 +1,25 @@
 {
-  "name": "clawvisual-ai",
+  "name": "clawvisual",
   "version": "0.1.0",
-  "private": true,
+  "description": "URL or long-form text to social carousel CLI and MCP client.",
+  "license": "MIT",
+  "bin": {
+    "clawvisual": "skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs"
+  },
+  "files": [
+    "skills/clawvisual-mcp/scripts/clawvisual-mcp-client.mjs",
+    "src",
+    "public",
+    "next.config.ts",
+    "postcss.config.mjs",
+    "tsconfig.json",
+    "next-env.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

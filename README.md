@@ -95,6 +95,62 @@ npm run dev
 
 If `3000` is already occupied, Next.js will move to another port such as `3001`. Use the actual port shown in the terminal.
 
+## CLI (npm -g)
+
+Install global CLI:
+
+```bash
+npm install -g clawvisual
+```
+
+Then run:
+
+```bash
+clawvisual set CLAWVISUAL_LLM_API_KEY "your_openrouter_key"
+# optional
+clawvisual set CLAWVISUAL_LLM_MODEL "google/gemini-3-flash-preview"
+clawvisual initialize
+clawvisual status
+clawvisual tools
+clawvisual convert --input "Paste long-form text or URL here" --slides auto
+clawvisual status --job <job_id>
+```
+
+`clawvisual initialize` will auto-start a local service when `CLAWVISUAL_MCP_URL` points to localhost. It prints the web URL after startup, then you can continue with `clawvisual xxx` commands.
+`clawvisual status` checks service identity (must be `clawvisual-mcp`) and avoids false positives from other local MCP servers on the same port.
+`clawvisual set/get/unset/config` stores local CLI config at `~/.clawvisual/config.json` (keys are case-insensitive, e.g. `clawvisual set clawvisual_llm_api_key ...`).
+
+CLI environment variables:
+- `CLAWVISUAL_MCP_URL` (default: `http://localhost:3000/api/mcp`)
+- `CLAWVISUAL_API_KEY` (required only when API key validation is enabled)
+- `CLAWVISUAL_LLM_API_KEY` / `CLAWVISUAL_LLM_API_URL` / `CLAWVISUAL_LLM_MODEL` (CLI-level aliases mapped to server `LLM_*` envs)
+
+## Docker
+
+Build image:
+
+```bash
+docker build -t clawvisual:1.0.0 .
+```
+
+Run container:
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e LLM_API_KEY=your_openrouter_api_key \
+  -e GEMINI_API_KEY=your_gemini_api_key \
+  -e NANO_BANANA_MODEL=gemini-3.1-flash-image-preview \
+  clawvisual:1.0.0
+```
+
+GHCR release-style run command:
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e LLM_API_KEY=your_openrouter_api_key \
+  ghcr.io/<owner>/clawvisual:<tag>
+```
+
 ## Workflow
 
 1. Input URL or long-form text
