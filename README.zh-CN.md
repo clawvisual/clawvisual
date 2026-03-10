@@ -1,5 +1,7 @@
 # clawvisual AI
 
+**把任意文章一键转成可发布的社媒短图文，文案和配图一起生成。**
+
 clawvisual AI 是一个开源的 **URL to social carousel** 生成框架，面向创作者、增长团队和自动化场景中的 **agent workflow**。
 
 你可以把长文章或 URL 转成可发布的社媒轮播内容：标题、caption、hashtags、slide 文案和生成图片。它同时支持 **MCP**，可被其他 agent 作为技能调用。
@@ -104,6 +106,7 @@ npm install -g clawvisual
 安装后可直接执行：
 
 ```bash
+clawvisual help
 clawvisual set CLAWVISUAL_LLM_API_KEY "your_openrouter_key"
 # 可选
 clawvisual set CLAWVISUAL_LLM_MODEL "google/gemini-3-flash-preview"

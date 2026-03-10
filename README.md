@@ -2,6 +2,8 @@
 
 中文文档: [README.zh-CN.md](README.zh-CN.md)
 
+**Turn any article into a social-ready carousel with copy and visuals.**
+
 clawvisual AI is an open source **URL to social carousel** generator for creators, growth teams, and builders of **agent workflow** automation.
 
 Turn a long article or URL into a social-ready carousel with hooks, captions, hashtags, slide copy, and generated visuals. It runs as an **MCP**-compatible service, so other agents can call it as a reusable skill.
@@ -106,6 +108,7 @@ npm install -g clawvisual
 Then run:
 
 ```bash
+clawvisual help
 clawvisual set CLAWVISUAL_LLM_API_KEY "your_openrouter_key"
 # optional
 clawvisual set CLAWVISUAL_LLM_MODEL "google/gemini-3-flash-preview"

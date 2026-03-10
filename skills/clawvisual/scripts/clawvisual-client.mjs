@@ -319,13 +319,62 @@ async function stopManagedService() {
   };
 }
 
-function usage() {
+function usage(command) {
+  if (command === "initialize") {
+    console.log(`clawvisual initialize
+
+Start or probe local clawvisual service and print Web URL.
+Auto-start works for localhost MCP endpoints.
+`);
+    return;
+  }
+
+  if (command === "convert") {
+    console.log(`clawvisual convert
+
+Usage:
+  clawvisual convert --input <text_or_url> [--slides auto|1-8] [--ratio 4:5|1:1|9:16|16:9] [--lang <code>] [--review auto|required]
+`);
+    return;
+  }
+
+  if (command === "status") {
+    console.log(`clawvisual status
+
+Usage:
+  clawvisual status
+  clawvisual status --job <job_id>
+`);
+    return;
+  }
+
+  if (command === "revise") {
+    console.log(`clawvisual revise
+
+Usage:
+  clawvisual revise --job <job_id> --instruction <text> [--intent rewrite_copy_style|regenerate_cover|regenerate_slides]
+`);
+    return;
+  }
+
+  if (command === "regenerate-cover") {
+    console.log(`clawvisual regenerate-cover
+
+Usage:
+  clawvisual regenerate-cover --job <job_id> [--instruction <text>] [--ratio 4:5|1:1|9:16|16:9]
+  clawvisual regenerate-cover --prompt <text> [--ratio 4:5|1:1|9:16|16:9]
+`);
+    return;
+  }
+
   console.log(`clawvisual MCP client
 
 Usage:
   clawvisual <command> [flags]
+  clawvisual help [command]
 
 Commands:
+  help [command]                              (show global or command-specific help)
   initialize                                  (auto-start local web service when needed)
   stop                                        (stop local service started by clawvisual initialize)
   restart                                     (stop then initialize)
@@ -342,6 +391,13 @@ Commands:
 
 Config keys:
   CLAWVISUAL_LLM_API_KEY | CLAWVISUAL_LLM_API_URL | CLAWVISUAL_LLM_MODEL | CLAWVISUAL_GEMINI_API_KEY | CLAWVISUAL_MCP_URL | CLAWVISUAL_API_KEY
+
+Examples:
+  clawvisual help
+  clawvisual help convert
+  clawvisual initialize
+  clawvisual convert --input "https://example.com/article" --slides auto
+  clawvisual status --job <job_id>
 `);
 }
 
@@ -491,12 +547,13 @@ function handleConfigCommand() {
 }
 
 async function main() {
-  const command = process.argv[2];
+  const rawCommand = process.argv[2];
+  const command = typeof rawCommand === "string" ? rawCommand.toLowerCase() : rawCommand;
   const args = parseArgs(process.argv.slice(3));
   const positional = process.argv.slice(3).filter((token) => !token.startsWith("--"));
 
   if (!command || command === "help" || command === "--help" || command === "-h") {
-    usage();
+    usage(typeof positional[0] === "string" ? positional[0].toLowerCase() : undefined);
     return;
   }
 
@@ -680,7 +737,7 @@ async function main() {
     return;
   }
 
-  throw new Error(`Unknown command: ${command}`);
+  throw new Error(`Unknown command: ${command}. Run 'clawvisual help' for usage.`);
 }
 
 main().catch((error) => {
