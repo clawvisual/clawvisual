@@ -128,6 +128,7 @@ CLI environment variables:
 - `CLAWVISUAL_API_KEY` (required only when API key validation is enabled)
 - `CLAWVISUAL_LLM_API_KEY` / `CLAWVISUAL_LLM_API_URL` / `CLAWVISUAL_LLM_MODEL` (CLI-level aliases mapped to server `LLM_*` envs)
 - `CLAWVISUAL_GEMINI_API_KEY` (CLI-level alias mapped to server `GEMINI_API_KEY`)
+  - If `GEMINI_API_KEY` is not configured, image generation falls back to OpenRouter and is usually slower.
 
 ## Docker
 

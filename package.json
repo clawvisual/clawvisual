@@ -1,6 +1,6 @@
 {
   "name": "clawvisual",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "URL or long-form text to social carousel CLI and MCP client.",
   "license": "MIT",
   "bin": {

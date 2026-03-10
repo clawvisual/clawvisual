@@ -126,6 +126,7 @@ CLI 相关环境变量：
 - `CLAWVISUAL_API_KEY`（仅在开启 API Key 校验时需要）
 - `CLAWVISUAL_LLM_API_KEY` / `CLAWVISUAL_LLM_API_URL` / `CLAWVISUAL_LLM_MODEL`（CLI 层别名，会映射为服务端 `LLM_*` 环境变量）
 - `CLAWVISUAL_GEMINI_API_KEY`（CLI 层别名，会映射为服务端 `GEMINI_API_KEY`）
+  - 若未配置 `GEMINI_API_KEY`，生图会回退到 OpenRouter，生成速度通常会更慢一些。
 
 ## Docker
 
