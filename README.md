@@ -6,7 +6,7 @@
 
 clawvisual AI is an open source **URL to social carousel** generator for creators, growth teams, and builders of **agent workflow** automation.
 
-Turn a long article or URL into a social-ready carousel with hooks, captions, hashtags, slide copy, and generated visuals. It runs as an **MCP**-compatible service, so other agents can call it as a reusable skill.
+Turn a long article or URL into a social-ready carousel (for X/Twitter, Instagram/INS, Xiaohongshu, and similar platforms) with hooks, captions, hashtags, slide copy, and generated visuals. It runs as an **MCP**-compatible service, so other agents can call it as a reusable skill.
 
 ### Feature Preview
 <p>
