@@ -110,6 +110,8 @@ clawvisual set CLAWVISUAL_LLM_API_KEY "your_openrouter_key"
 # optional
 clawvisual set CLAWVISUAL_LLM_MODEL "google/gemini-3-flash-preview"
 clawvisual initialize
+clawvisual stop
+clawvisual restart
 clawvisual status
 clawvisual tools
 clawvisual convert --input "Paste long-form text or URL here" --slides auto
@@ -117,6 +119,7 @@ clawvisual status --job <job_id>
 ```
 
 `clawvisual initialize` will auto-start a local service when `CLAWVISUAL_MCP_URL` points to localhost. It prints the web URL after startup, then you can continue with `clawvisual xxx` commands.
+`clawvisual stop` stops the local service started by CLI managed process tracking. `clawvisual restart` performs stop + initialize.
 `clawvisual status` checks service identity (must be `clawvisual`) and avoids false positives from other local MCP servers on the same port.
 `clawvisual set/get/unset/config` stores local CLI config at `~/.clawvisual/config.json` (keys are case-insensitive, e.g. `clawvisual set clawvisual_llm_api_key ...`).
 
@@ -124,6 +127,7 @@ CLI environment variables:
 - `CLAWVISUAL_MCP_URL` (default: `http://localhost:3000/api/mcp`)
 - `CLAWVISUAL_API_KEY` (required only when API key validation is enabled)
 - `CLAWVISUAL_LLM_API_KEY` / `CLAWVISUAL_LLM_API_URL` / `CLAWVISUAL_LLM_MODEL` (CLI-level aliases mapped to server `LLM_*` envs)
+- `CLAWVISUAL_GEMINI_API_KEY` (CLI-level alias mapped to server `GEMINI_API_KEY`)
 
 ## Docker
 

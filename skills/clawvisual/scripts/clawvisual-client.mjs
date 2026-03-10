@@ -9,6 +9,7 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(SCRIPT_DIR, "../../..");
 const CONFIG_DIR = path.join(os.homedir(), ".clawvisual");
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
+const SERVICE_FILE = path.join(CONFIG_DIR, "service.json");
 const CONFIG_ALIASES = {
   LLM_API_KEY: "CLAWVISUAL_LLM_API_KEY",
   CLAWVISUAL_LLM_API_KEY: "CLAWVISUAL_LLM_API_KEY",
@@ -18,9 +19,11 @@ const CONFIG_ALIASES = {
   CLAWVISUAL_LLM_MODEL: "CLAWVISUAL_LLM_MODEL",
   MCP_URL: "CLAWVISUAL_MCP_URL",
   CLAWVISUAL_MCP_URL: "CLAWVISUAL_MCP_URL",
-  CLAWVISUAL_API_KEY: "CLAWVISUAL_API_KEY"
+  CLAWVISUAL_API_KEY: "CLAWVISUAL_API_KEY",
+  GEMINI_API_KEY: "CLAWVISUAL_GEMINI_API_KEY",
+  CLAWVISUAL_GEMINI_API_KEY: "CLAWVISUAL_GEMINI_API_KEY"
 };
-const SECRET_KEYS = new Set(["CLAWVISUAL_LLM_API_KEY", "CLAWVISUAL_API_KEY"]);
+const SECRET_KEYS = new Set(["CLAWVISUAL_LLM_API_KEY", "CLAWVISUAL_API_KEY", "CLAWVISUAL_GEMINI_API_KEY"]);
 const REQUIRED_TOOLS = new Set(["convert", "job_status", "revise", "regenerate_cover"]);
 const LOCAL_CONFIG = readLocalConfig();
 const BASE_URL = process.env.CLAWVISUAL_MCP_URL || getConfigValue(LOCAL_CONFIG, "CLAWVISUAL_MCP_URL") || "http://localhost:3000/api/mcp";
@@ -43,6 +46,31 @@ function writeLocalConfig(config) {
   fs.writeFileSync(CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 }
 
+function readServiceState() {
+  try {
+    const raw = fs.readFileSync(SERVICE_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    if (!Number.isInteger(parsed.pid) || parsed.pid <= 0) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeServiceState(state) {
+  fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  fs.writeFileSync(SERVICE_FILE, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+}
+
+function clearServiceState() {
+  try {
+    fs.rmSync(SERVICE_FILE, { force: true });
+  } catch {
+    // Ignore cleanup errors.
+  }
+}
+
 function normalizeConfigKey(rawKey) {
   if (!rawKey || typeof rawKey !== "string") return null;
   const normalized = rawKey.trim().toUpperCase();
@@ -58,6 +86,7 @@ function getEffectiveServerEnv() {
   if (!env.LLM_API_KEY) env.LLM_API_KEY = getConfigValue(LOCAL_CONFIG, "CLAWVISUAL_LLM_API_KEY");
   if (!env.LLM_API_URL) env.LLM_API_URL = getConfigValue(LOCAL_CONFIG, "CLAWVISUAL_LLM_API_URL");
   if (!env.LLM_MODEL) env.LLM_MODEL = getConfigValue(LOCAL_CONFIG, "CLAWVISUAL_LLM_MODEL");
+  if (!env.GEMINI_API_KEY) env.GEMINI_API_KEY = getConfigValue(LOCAL_CONFIG, "CLAWVISUAL_GEMINI_API_KEY");
   return env;
 }
 
@@ -71,6 +100,16 @@ function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function isPidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function parseBaseUrl(raw) {
@@ -185,6 +224,14 @@ async function ensureServerReady() {
     stdio: "ignore"
   });
   child.unref();
+  if (Number.isInteger(child.pid) && child.pid > 0) {
+    writeServiceState({
+      pid: child.pid,
+      mcp_url: BASE_URL,
+      web_url: getWebUrl(BASE_URL),
+      started_at: new Date().toISOString()
+    });
+  }
 
   for (let i = 0; i < 120; i += 1) {
     await sleep(500);
@@ -204,6 +251,74 @@ async function ensureServerReady() {
   );
 }
 
+async function stopManagedService() {
+  const state = readServiceState();
+  if (!state) {
+    return {
+      ok: false,
+      stopped: false,
+      reason: "No managed clawvisual service record found. If service was started manually, stop it from that terminal."
+    };
+  }
+
+  const pid = Number(state.pid);
+  if (!isPidAlive(pid)) {
+    clearServiceState();
+    return {
+      ok: true,
+      stopped: false,
+      pid,
+      reason: "Managed process is already stopped; cleaned up stale PID record."
+    };
+  }
+
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch (error) {
+    return {
+      ok: false,
+      stopped: false,
+      pid,
+      reason: `Failed to stop process ${pid}: ${error instanceof Error ? error.message : String(error)}`
+    };
+  }
+
+  for (let i = 0; i < 20; i += 1) {
+    await sleep(150);
+    if (!isPidAlive(pid)) {
+      clearServiceState();
+      return {
+        ok: true,
+        stopped: true,
+        pid,
+        mcp_url: state.mcp_url ?? BASE_URL,
+        web_url: state.web_url ?? getWebUrl(BASE_URL)
+      };
+    }
+  }
+
+  try {
+    process.kill(pid, "SIGKILL");
+  } catch {
+    // Best effort.
+  }
+
+  await sleep(150);
+  const alive = isPidAlive(pid);
+  if (!alive) {
+    clearServiceState();
+  }
+
+  return {
+    ok: !alive,
+    stopped: !alive,
+    pid,
+    mcp_url: state.mcp_url ?? BASE_URL,
+    web_url: state.web_url ?? getWebUrl(BASE_URL),
+    reason: alive ? "Process is still running after SIGTERM/SIGKILL attempt." : undefined
+  };
+}
+
 function usage() {
   console.log(`clawvisual MCP client
 
@@ -212,6 +327,8 @@ Usage:
 
 Commands:
   initialize                                  (auto-start local web service when needed)
+  stop                                        (stop local service started by clawvisual initialize)
+  restart                                     (stop then initialize)
   set <key> <value>                           (store CLI config values)
   get <key>
   unset <key>
@@ -224,7 +341,7 @@ Commands:
   call --name <tool_name> --args <json>
 
 Config keys:
-  CLAWVISUAL_LLM_API_KEY | CLAWVISUAL_LLM_API_URL | CLAWVISUAL_LLM_MODEL | CLAWVISUAL_MCP_URL | CLAWVISUAL_API_KEY
+  CLAWVISUAL_LLM_API_KEY | CLAWVISUAL_LLM_API_URL | CLAWVISUAL_LLM_MODEL | CLAWVISUAL_GEMINI_API_KEY | CLAWVISUAL_MCP_URL | CLAWVISUAL_API_KEY
 `);
 }
 
@@ -400,6 +517,26 @@ async function main() {
 
   if (command === "config") {
     handleConfigCommand();
+    return;
+  }
+
+  if (command === "stop") {
+    const result = await stopManagedService();
+    print(result);
+    return;
+  }
+
+  if (command === "restart") {
+    const stopped = await stopManagedService();
+    const server = await ensureServerReady();
+    const result = await rpc("initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: {},
+      clientInfo: { name: "clawvisual-skill-client", version: "0.1.0" }
+    });
+    const webUrl = server.webUrl || getWebUrl(BASE_URL);
+    console.log(`Service restarted. Web UI: ${webUrl}`);
+    print({ restarted: true, stop: stopped, initialize: result });
     return;
   }
 

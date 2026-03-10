@@ -246,12 +246,19 @@ async function tryOpenrouterFallback({
   reason: string;
 }): Promise<{ imageUrl: string; usedFallback: boolean; provider: string; error?: string } | null> {
   const openrouterPrimaryModel = toOpenrouterModelName(modelName);
-  console.warn("[NanoBanana] Native Gemini failed, fallback to OpenRouter", {
-    reason,
-    primaryModel: modelName,
-    openrouterModel: openrouterPrimaryModel,
-    aspectRatio
-  });
+  if (reason === "missing GEMINI_API_KEY") {
+    console.info("[NanoBanana] GEMINI_API_KEY missing, route directly to OpenRouter", {
+      openrouterModel: openrouterPrimaryModel,
+      aspectRatio
+    });
+  } else {
+    console.warn("[NanoBanana] Native Gemini failed, fallback to OpenRouter", {
+      reason,
+      primaryModel: modelName,
+      openrouterModel: openrouterPrimaryModel,
+      aspectRatio
+    });
+  }
 
   const openrouterRetry = await generateNanoBananaImageViaOpenrouter({
     prompt,

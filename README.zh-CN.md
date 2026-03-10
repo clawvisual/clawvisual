@@ -108,6 +108,8 @@ clawvisual set CLAWVISUAL_LLM_API_KEY "your_openrouter_key"
 # 可选
 clawvisual set CLAWVISUAL_LLM_MODEL "google/gemini-3-flash-preview"
 clawvisual initialize
+clawvisual stop
+clawvisual restart
 clawvisual status
 clawvisual tools
 clawvisual convert --input "在这里粘贴长文本或 URL" --slides auto
@@ -115,6 +117,7 @@ clawvisual status --job <job_id>
 ```
 
 `clawvisual initialize` 在 `CLAWVISUAL_MCP_URL` 指向 localhost 时会自动拉起本地服务，并输出可访问的 Web URL；之后可继续执行 `clawvisual xxx` 命令。
+`clawvisual stop` 可关闭由 CLI 托管启动的本地服务；`clawvisual restart` 等价于 stop + initialize。
 `clawvisual status` 会校验服务指纹（必须是 `clawvisual`），避免同端口其他 MCP 服务造成误判。
 `clawvisual set/get/unset/config` 会把 CLI 配置写入 `~/.clawvisual/config.json`（key 大小写不敏感，例如 `clawvisual set clawvisual_llm_api_key ...`）。
 
@@ -122,6 +125,7 @@ CLI 相关环境变量：
 - `CLAWVISUAL_MCP_URL`（默认：`http://localhost:3000/api/mcp`）
 - `CLAWVISUAL_API_KEY`（仅在开启 API Key 校验时需要）
 - `CLAWVISUAL_LLM_API_KEY` / `CLAWVISUAL_LLM_API_URL` / `CLAWVISUAL_LLM_MODEL`（CLI 层别名，会映射为服务端 `LLM_*` 环境变量）
+- `CLAWVISUAL_GEMINI_API_KEY`（CLI 层别名，会映射为服务端 `GEMINI_API_KEY`）
 
 ## Docker
 
