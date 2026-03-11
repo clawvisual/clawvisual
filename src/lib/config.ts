@@ -35,6 +35,7 @@ export const appConfig = {
     enableSourceIntel: (process.env.PIPELINE_ENABLE_SOURCE_INTEL ?? "false").trim().toLowerCase() === "true",
     enableStoryboardQuality: (process.env.PIPELINE_ENABLE_STORYBOARD_QUALITY ?? "false").trim().toLowerCase() === "true",
     enableStyleRecommender: (process.env.PIPELINE_ENABLE_STYLE_RECOMMENDER ?? "false").trim().toLowerCase() === "true",
+    enableAttentionAuditor: (process.env.PIPELINE_ENABLE_ATTENTION_AUDITOR ?? "false").trim().toLowerCase() === "true",
     enableAttentionFixer: (process.env.PIPELINE_ENABLE_ATTENTION_FIXER ?? "false").trim().toLowerCase() === "true",
     enablePostCopyQuality: (process.env.PIPELINE_ENABLE_POST_COPY_QUALITY ?? "false").trim().toLowerCase() === "true",
     enableFinalAudit: (process.env.PIPELINE_ENABLE_FINAL_AUDIT ?? "false").trim().toLowerCase() === "true"

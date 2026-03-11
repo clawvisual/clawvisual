@@ -2,7 +2,13 @@ import { callSkillLlmJson } from "@/lib/llm/skill-client";
 import { appConfig } from "@/lib/config";
 import type { ConversionContext } from "@/lib/types/skills";
 
-function fallbackCTA(input: string): string {
+function fallbackCTA(input: string, mode: ConversionContext["request"]["contentMode"]): string {
+  if (mode === "product_marketing") {
+    return "Click through and test this in your next campaign.";
+  }
+  if (mode === "trend_hotspot") {
+    return "Drop your take in comments before this trend shifts.";
+  }
   const text = input.toLowerCase();
   if (text.includes("strategy") || text.includes("framework")) {
     return "Save this framework and send it to your team.";
@@ -42,11 +48,15 @@ function scoreTag(params: {
   trendScore: number;
   corpus: string;
   cooccurTokens: Map<string, number>;
+  mode: ConversionContext["request"]["contentMode"];
 }): number {
   const token = params.tag.replace(/^#/, "").toLowerCase();
   const semantic = params.corpus.includes(token) ? 82 : token.length >= 8 ? 66 : 58;
   const cooccur = Math.min(100, 48 + (params.cooccurTokens.get(token) ?? 0) * 14);
-  return Math.round(params.trendScore * 0.55 + semantic * 0.3 + cooccur * 0.15);
+  const trendWeight = params.mode === "trend_hotspot" ? 0.72 : 0.55;
+  const semanticWeight = params.mode === "trend_hotspot" ? 0.18 : 0.3;
+  const cooccurWeight = 1 - trendWeight - semanticWeight;
+  return Math.round(params.trendScore * trendWeight + semantic * semanticWeight + cooccur * cooccurWeight);
 }
 
 function rankHashtags(context: ConversionContext, llmTags: string[]): string[] {
@@ -78,7 +88,8 @@ function rankHashtags(context: ConversionContext, llmTags: string[]): string[] {
         tag,
         trendScore: trendMap.get(tag.toLowerCase()) ?? 60,
         corpus,
-        cooccurTokens
+        cooccurTokens,
+        mode: context.request.contentMode
       })
     }))
     .sort((a, b) => b.score - a.score)
@@ -87,6 +98,13 @@ function rankHashtags(context: ConversionContext, llmTags: string[]): string[] {
 }
 
 export async function skill12ViralOptimizer(context: ConversionContext): Promise<ConversionContext> {
+  const modeRequirement =
+    context.request.contentMode === "product_marketing"
+      ? "Bias caption toward conversion intent, explicit value proposition, and strong CTA."
+      : context.request.contentMode === "trend_hotspot"
+        ? "Bias caption toward timeliness, stance, and conversation triggers."
+        : "Bias caption toward clarity and information retention.";
+
   const llmResult = await callSkillLlmJson<{ cta?: string; caption?: string; hashtags?: string[] }>({
     skill: "viralOptimizer",
     input: {
@@ -100,8 +118,9 @@ export async function skill12ViralOptimizer(context: ConversionContext): Promise
       tone: context.request.tone,
       source_title: context.request.sourceTitle,
       mode: context.request.generationMode,
+      content_mode: context.request.contentMode,
       requirement:
-        "Generate CTA plus a short social caption and 1-5 hashtags. Prioritize trend_signals while keeping semantic relevance. Hashtags must start with #."
+        `Generate CTA plus a short social caption and 1-5 hashtags. Prioritize trend_signals while keeping semantic relevance. Hashtags must start with #. ${modeRequirement}`
     },
     outputSchemaHint:
       '{"cta":"Save for later and tag a friend.","caption":"...","hashtags":["#AI","#Productivity","#Growth"]}',
@@ -112,11 +131,12 @@ export async function skill12ViralOptimizer(context: ConversionContext): Promise
   const cta = String(llmResult?.cta ?? "").trim();
   const caption = String(llmResult?.caption ?? "").trim();
   const hashtags = rankHashtags(context, llmResult?.hashtags ?? []);
+  const fallbackCta = fallbackCTA(context.request.inputText, context.request.contentMode);
 
   return {
     ...context,
-    cta: cta || fallbackCTA(context.request.inputText),
-    caption: caption || fallbackCaption(context.corePoints, cta || fallbackCTA(context.request.inputText)),
+    cta: cta || fallbackCta,
+    caption: caption || fallbackCaption(context.corePoints, cta || fallbackCta),
     hashtags
   };
 }

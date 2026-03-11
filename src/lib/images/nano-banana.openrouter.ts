@@ -126,7 +126,7 @@ function normalizeLockedTexts(values: string[]): string[] {
     .map((item) => item.replace(/\s+/g, " ").trim())
     .filter((item) => item.length > 0)
     .filter((item) => /[\p{L}\p{N}]/u.test(item));
-  return Array.from(new Set(normalized)).slice(0, 4);
+  return Array.from(new Set(normalized)).slice(0, 6);
 }
 
 function inferLockedTextsFromPrompt(prompt: string): string[] {
@@ -329,16 +329,18 @@ export async function generateNanoBananaImage({
 
   const textLockRequirement = textOnImage && effectiveLockedTexts.length
     ? [
-        "Text lock requirement: render each LOCKED_TEXT exactly character-by-character.",
+        "Text lock requirement: render each exact text line exactly character-by-character.",
         "Do not translate, paraphrase, summarize, truncate, add, delete, normalize punctuation, or change capitalization/line order.",
-        "Do not render any extra text beyond LOCKED_TEXT lines.",
+        "Do not render any extra text beyond the exact text lines provided below.",
+        "Never render labels like LOCKED_TEXT, LOCKED_TEXT_1, TEXT_LOCK, or any placeholder token names.",
         "Never render hexadecimal color strings (for example #22d3ee) or palette legend labels.",
-        ...effectiveLockedTexts.map((item, index) => `LOCKED_TEXT_${index + 1}: ${item}`)
+        "Exact text lines:",
+        ...effectiveLockedTexts.map((item) => `- ${item}`)
       ].join("\n")
     : "";
 
   const outputRequirement = textOnImage
-    ? "Render locked text prominently when LOCKED_TEXT lines are provided."
+    ? "Render exact text lines prominently when they are provided."
     : "Output requirement: image-only background for text overlay. Include clean copy space in composition.";
 
   const finalPrompt = [

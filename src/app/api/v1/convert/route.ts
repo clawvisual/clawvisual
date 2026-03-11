@@ -3,12 +3,13 @@ import { z } from "zod";
 import { validateApiKey } from "@/lib/auth/api-key";
 import { DEFAULT_LANGUAGE, normalizeLanguage } from "@/lib/i18n/languages";
 import { createJob } from "@/lib/queue/job-store";
+import { normalizeContentMode } from "@/lib/types/skills";
 
 export const runtime = "nodejs";
 
 const convertSchema = z.object({
   session_id: z.string().uuid().optional(),
-  input_text: z.string().min(20, "input_text should be at least 20 chars"),
+  input_text: z.string().min(8, "input_text should be at least 8 chars"),
   max_slides: z.number().int().min(1).max(8).optional(),
   target_slides: z.number().int().min(1).max(8).optional(),
   aspect_ratios: z.array(z.enum(["4:5", "9:16", "1:1", "16:9"])).default(["4:5", "1:1"]),
@@ -16,6 +17,7 @@ const convertSchema = z.object({
   tone: z.string().default("auto"),
   output_language: z.string().trim().default(DEFAULT_LANGUAGE).transform((value) => normalizeLanguage(value)),
   generation_mode: z.enum(["standard", "quote_slides"]).default("quote_slides"),
+  content_mode: z.enum(["longform_digest", "product_marketing", "trend_hotspot"]).default("longform_digest"),
   review_mode: z.enum(["auto", "required"]).default("auto")
 }).transform((value) => ({
   ...value,
@@ -44,6 +46,13 @@ export async function POST(request: Request) {
   }
 
   const payload = parsed.data;
+  const contentMode = normalizeContentMode(payload.content_mode);
+  if (contentMode !== "trend_hotspot" && payload.input_text.trim().length < 20) {
+    return NextResponse.json(
+      { error: "input_text should be at least 20 chars for longform_digest or product_marketing mode" },
+      { status: 400 }
+    );
+  }
   // createJob immediately returns a queued record; actual conversion runs asynchronously.
   const job = createJob({
     inputText: payload.input_text,
@@ -53,6 +62,7 @@ export async function POST(request: Request) {
     tone: payload.tone,
     outputLanguage: payload.output_language,
     generationMode: payload.generation_mode,
+    contentMode,
     reviewMode: payload.review_mode
   }, { sessionId: payload.session_id });
 

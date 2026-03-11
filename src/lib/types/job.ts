@@ -107,6 +107,7 @@ export interface JobRecord {
     tone: string;
     outputLanguage: string;
     generationMode: "standard" | "quote_slides";
+    contentMode: "longform_digest" | "product_marketing" | "trend_hotspot";
     reviewMode?: "auto" | "required";
     revisePayload?: RevisePayload;
   };

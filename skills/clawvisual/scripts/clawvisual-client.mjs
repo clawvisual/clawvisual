@@ -333,7 +333,7 @@ Auto-start works for localhost MCP endpoints.
     console.log(`clawvisual convert
 
 Usage:
-  clawvisual convert --input <text_or_url> [--slides auto|1-8] [--ratio 4:5|1:1|9:16|16:9] [--lang <code>] [--review auto|required]
+  clawvisual convert --input <text_or_url> [--slides auto|1-8] [--ratio 4:5|1:1|9:16|16:9] [--lang <code>] [--content-mode longform_digest|product_marketing|trend_hotspot] [--review auto|required]
 `);
     return;
   }
@@ -383,7 +383,7 @@ Commands:
   unset <key>
   config                                      (list stored config values)
   tools
-  convert --input <text> [--lang <code>] [--slides auto|1-8] [--ratio 4:5|1:1|9:16|16:9] [--session <uuid>] [--review auto|required]
+  convert --input <text> [--lang <code>] [--slides auto|1-8] [--ratio 4:5|1:1|9:16|16:9] [--content-mode longform_digest|product_marketing|trend_hotspot] [--session <uuid>] [--review auto|required]
   status [--job <job_id>]
   revise --job <job_id> --instruction <text> [--intent rewrite_copy_style|regenerate_cover|regenerate_slides]
   regenerate-cover (--job <job_id> [--instruction <text>] | --prompt <text>) [--ratio 4:5|1:1|9:16|16:9]
@@ -631,6 +631,17 @@ async function main() {
         ? args.ratio
         : "4:5";
 
+    const normalizedContentModeArg =
+      typeof args["content-mode"] === "string"
+        ? args["content-mode"].trim().toLowerCase()
+        : typeof args.content_mode === "string"
+          ? args.content_mode.trim().toLowerCase()
+          : "";
+    const contentMode =
+      normalizedContentModeArg === "product_marketing" || normalizedContentModeArg === "trend_hotspot"
+        ? normalizedContentModeArg
+        : "longform_digest";
+
     const payload = {
       session_id: typeof args.session === "string" ? args.session : undefined,
       input_text: args.input,
@@ -639,6 +650,7 @@ async function main() {
       style_preset: typeof args.style === "string" ? args.style : "auto",
       tone: typeof args.tone === "string" ? args.tone : "auto",
       generation_mode: typeof args.mode === "string" ? args.mode : "quote_slides",
+      content_mode: contentMode,
       output_language: typeof args.lang === "string" ? args.lang : "en-US",
       review_mode: args.review === "required" ? "required" : "auto"
     };

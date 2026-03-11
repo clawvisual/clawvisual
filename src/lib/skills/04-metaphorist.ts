@@ -1,6 +1,16 @@
 import { callSkillLlmJson } from "@/lib/llm/skill-client";
 import type { CompositionPlan, ConversionContext, DiagramType, SlideVisual } from "@/lib/types/skills";
 
+function getMetaphorObjective(mode: ConversionContext["request"]["contentMode"]): string {
+  if (mode === "longform_digest") {
+    return "Create literal, information-first visual plans. Keep scene complexity low (one central anchor + structured info cards). Avoid poetic scenery, cinematic mood shots, and overloaded decorative elements. Emphasize concrete entities, process logic, and data structure that explain the slide meaning directly.";
+  }
+  if (mode === "product_marketing") {
+    return "Create conversion-focused visual plans with clear pain/benefit tension and product value cues.";
+  }
+  return "Create timely, opinionated visual plans for trend narratives with strong feed-stopping clarity.";
+}
+
 function normalizeCompositionPlan(value: unknown): CompositionPlan {
   const raw = String(value ?? "").trim().toLowerCase();
   if (raw === "left-heavy") return "left-heavy";
@@ -118,8 +128,13 @@ function fallbackMetaphorName(slideScript: string, index: number): string {
   return trimmed.length > 28 ? `${trimmed.slice(0, 27)}…` : trimmed;
 }
 
-function fallbackVisualDescription(slideScript: string, index: number): string {
+function fallbackVisualDescription(slideScript: string, index: number, mode: ConversionContext["request"]["contentMode"]): string {
   const summary = slideScript.replace(/\s+/g, " ").trim();
+  if (mode === "longform_digest") {
+    return summary
+      ? `A clean infographic layout with one central anchor and structured info cards that directly explains: ${summary}`
+      : "A clean explanatory infographic with one central anchor, structured cards, and minimal decoration.";
+  }
   const variant = [
     "editorial high-contrast",
     "cinematic asymmetric",
@@ -142,16 +157,16 @@ function fallbackReasoning(slideScript: string): string {
 function fallbackVisuals(context: ConversionContext): SlideVisual[] {
   return context.storyboard.map((slide) => ({
     index: slide.index,
-    metaphor: fallbackVisualDescription(slide.script, slide.index),
+    metaphor: fallbackVisualDescription(slide.script, slide.index, context.request.contentMode),
     metaphorPlan: {
       metaphorName: fallbackMetaphorName(slide.script, slide.index),
-      visualDescription: fallbackVisualDescription(slide.script, slide.index),
+      visualDescription: fallbackVisualDescription(slide.script, slide.index, context.request.contentMode),
       reasoning: fallbackReasoning(slide.script),
       compositionPlan: fallbackCompositionPlan(slide.index),
       diagramType: inferDiagramType(slide.script),
       entityTags: inferEntityTags(context.request.inputText, slide.script),
       metricTags: inferMetricTags(slide.script),
-      styleTag: "conceptual-symbolism",
+      styleTag: context.request.contentMode === "longform_digest" ? "information-rich" : "conceptual-symbolism",
       heroSubject: fallbackMetaphorName(slide.script, slide.index),
       cameraAngle: fallbackCameraAngle(slide.index),
       depthLayers: fallbackDepthLayers(slide.index),
@@ -197,7 +212,7 @@ export async function skill04Metaphorist(context: ConversionContext): Promise<Co
         slide_content: slide.script
       })),
       objective:
-        "Create conceptual visual metaphors (not literal keyword repetition). Also classify diagram_type and extract entity_tags/metric_tags for domain-adaptive visual storytelling (business, personal growth, emotion, education, lifestyle, tech). Each slide must explicitly define hero_subject, camera_angle, depth_layers, motion_cue, and emotional_trigger. Every slide must have distinctive metaphor and composition; do not repeat similar scenes across slides. Vary camera language, color mood direction, and composition style across the sequence. Output visual_description in English and reasoning in target language. Keep strong text-safe composition."
+        `${getMetaphorObjective(context.request.contentMode)} Also classify diagram_type and extract entity_tags/metric_tags for domain-adaptive visual storytelling (business, personal growth, emotion, education, lifestyle, tech). Each slide must explicitly define hero_subject, camera_angle, depth_layers, motion_cue, and emotional_trigger. Every slide must have distinctive composition; do not repeat similar scenes across slides. Output visual_description in English and reasoning in target language. Keep strong text-safe composition.`
     },
     outputSchemaHint:
       '{"items":[{"index":1,"metaphor_name":"...","visual_description":"...","reasoning":"...","composition_plan":"left-heavy|right-heavy|bottom-heavy|top-heavy|centered","hero_subject":"...","camera_angle":"...","depth_layers":"foreground/midground/background ...","motion_cue":"...","emotional_trigger":"...","diagram_type":"metaphor|comparison_pillar|concentric_moat|process_flow|metric_trend","entity_tags":["community","habit"],"metric_tags":["30%","90 days"],"heading":"...","body":"...","style_tag":"..."}]}',
@@ -230,7 +245,7 @@ export async function skill04Metaphorist(context: ConversionContext): Promise<Co
 
   const visuals: SlideVisual[] = context.storyboard.map((slide) => {
     const item = byIndex.get(slide.index);
-    const fallbackDescription = fallbackVisualDescription(slide.script, slide.index);
+    const fallbackDescription = fallbackVisualDescription(slide.script, slide.index, context.request.contentMode);
     const fallbackName = fallbackMetaphorName(slide.script, slide.index);
     return {
       index: slide.index,
@@ -243,7 +258,9 @@ export async function skill04Metaphorist(context: ConversionContext): Promise<Co
         diagramType: item?.diagramType || inferDiagramType(slide.script),
         entityTags: item?.entityTags?.length ? item.entityTags : inferEntityTags(context.request.inputText, slide.script),
         metricTags: item?.metricTags?.length ? item.metricTags : inferMetricTags(slide.script),
-        styleTag: item?.styleTag || "conceptual-symbolism",
+        styleTag:
+          item?.styleTag ||
+          (context.request.contentMode === "longform_digest" ? "information-rich" : "conceptual-symbolism"),
         heroSubject: item?.heroSubject || fallbackName,
         cameraAngle: item?.cameraAngle || fallbackCameraAngle(slide.index),
         depthLayers: item?.depthLayers || fallbackDepthLayers(slide.index),

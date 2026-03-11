@@ -3,6 +3,21 @@ import { hasUnexpectedHan } from "@/lib/i18n/text-guard";
 import { pickKeywords } from "@/lib/skills/utils";
 import type { ConversionContext } from "@/lib/types/skills";
 
+function sanitizeHierarchyLabel(text: string): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+
+  const stripped = normalized
+    .replace(/^(?:h[1-6]|heading|title|subtitle|subheading|body)\s*[:：-]\s*/i, "")
+    .replace(/^h[1-6]\s+/i, "")
+    .trim();
+
+  if (/^(?:h[1-6]|heading|title|subtitle|subheading|body)$/i.test(stripped)) {
+    return "";
+  }
+  return stripped;
+}
+
 export async function skill06HierarchyMapper(context: ConversionContext): Promise<ConversionContext> {
   const isQuoteMode = context.request.generationMode === "quote_slides";
   const llmResult = await callSkillLlmJson<{
@@ -41,12 +56,13 @@ export async function skill06HierarchyMapper(context: ConversionContext): Promis
     const index = Number(item.index);
     if (!Number.isFinite(index)) continue;
 
-    const body = String(item.body ?? "").trim();
-    const heading = String(item.heading ?? "").trim();
-    const subheading = String(item.subheading ?? "").trim();
+    const body = sanitizeHierarchyLabel(String(item.body ?? ""));
+    const headingCandidate = sanitizeHierarchyLabel(String(item.heading ?? ""));
+    const heading = headingCandidate || body.split(/\s+/).slice(0, 10).join(" ");
+    const subheading = sanitizeHierarchyLabel(String(item.subheading ?? ""));
     const keywords = Array.isArray(item.highlightKeywords)
       ? item.highlightKeywords
-          .map((keyword) => String(keyword).trim())
+          .map((keyword) => sanitizeHierarchyLabel(String(keyword)))
           .filter(Boolean)
           .slice(0, isQuoteMode ? 2 : 5)
       : [];
@@ -85,12 +101,15 @@ export async function skill06HierarchyMapper(context: ConversionContext): Promis
 
     const words = visual.hierarchy.body.split(/\s+/);
     const fallbackKeywords = pickKeywords(visual.hierarchy.body, isQuoteMode ? 2 : 3);
+    const fallbackBody = sanitizeHierarchyLabel(visual.hierarchy.body) || visual.hierarchy.body;
+    const fallbackHeading = sanitizeHierarchyLabel(visual.hierarchy.heading) || words.slice(0, 8).join(" ");
+    const fallbackSubheading = sanitizeHierarchyLabel(visual.hierarchy.subheading ?? "");
     return {
       ...visual,
       hierarchy: {
-        heading: isQuoteMode ? visual.hierarchy.body : words.slice(0, 8).join(" "),
-        subheading: isQuoteMode ? undefined : words.slice(8, 18).join(" "),
-        body: visual.hierarchy.body,
+        heading: isQuoteMode ? fallbackBody : fallbackHeading,
+        subheading: isQuoteMode ? undefined : fallbackSubheading || words.slice(8, 18).join(" "),
+        body: fallbackBody,
         highlightKeywords: fallbackKeywords
       }
     };

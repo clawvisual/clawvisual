@@ -31,6 +31,7 @@ import {
 
 type JobStatus = "queued" | "running" | "completed" | "failed";
 type AspectRatio = "4:5" | "9:16" | "1:1" | "16:9";
+type ContentMode = "longform_digest" | "product_marketing" | "trend_hotspot";
 
 const ASPECT_RATIO_OPTIONS: Array<{ value: AspectRatio; label: string }> = [
   { value: "4:5", label: "Portrait 4:5" },
@@ -40,6 +41,11 @@ const ASPECT_RATIO_OPTIONS: Array<{ value: AspectRatio; label: string }> = [
 ];
 
 const SLIDE_COUNT_OPTIONS = ["auto", "1", "2", "3", "4", "5", "6", "7", "8"] as const;
+const CONTENT_MODE_OPTIONS: Array<{ value: ContentMode; label: string }> = [
+  { value: "longform_digest", label: "Longform Digest" },
+  { value: "product_marketing", label: "Product Marketing" },
+  { value: "trend_hotspot", label: "Trend Hotspot" }
+];
 
 type ConvertResponse = {
   job_id: string;
@@ -251,7 +257,7 @@ const STARTER_CASES: StarterCase[] = [
   {
     id: "case-url-productivity",
     title: "Fix Your Life Framework",
-    description: "Use a long-form article URL and convert it into a 8-slide social carousel.",
+    description: "Use a long-form article URL and convert it into a compact social carousel.",
     payload: "https://letters.thedankoe.com/p/how-to-fix-your-entire-life-in-1",
     badge: "URL"
   },
@@ -260,7 +266,7 @@ const STARTER_CASES: StarterCase[] = [
     title: "Controversy Hook Pack",
     description: "Generate polarizing hooks and concise scripts from a single argument draft.",
     payload:
-      "Most creators are not bad at content. They are bad at distribution. Create an 8-slide carousel proving why distribution beats raw quality with 3 concrete examples.",
+      "Most creators are not bad at content. They are bad at distribution. Create a concise carousel proving why distribution beats raw quality with 3 concrete examples.",
     badge: "Copy"
   },
   {
@@ -327,6 +333,7 @@ export default function HomePage() {
   const [inputText, setInputText] = useState("");
   const [outputLanguage, setOutputLanguage] = useState<SupportedLanguageCode>(DEFAULT_LANGUAGE);
   const [primaryAspectRatio, setPrimaryAspectRatio] = useState<AspectRatio>("4:5");
+  const [contentMode, setContentMode] = useState<ContentMode>("longform_digest");
   const [slideCountInput, setSlideCountInput] = useState("auto");
   const [slideCountMenuOpen, setSlideCountMenuOpen] = useState(false);
   const [slideCountMenuPlacement, setSlideCountMenuPlacement] = useState<"down" | "up">("down");
@@ -895,6 +902,7 @@ export default function HomePage() {
           style_preset: "auto",
           tone: "auto",
           generation_mode: "quote_slides",
+          content_mode: contentMode,
           output_language: outputLanguage
         }),
       });
@@ -931,7 +939,7 @@ export default function HomePage() {
       await pollJob(created.status_url, nextSessionId, created.job_id);
       await refreshSessionHistory();
     },
-    [orderedJobs, outputLanguage, pollJob, primaryAspectRatio, refreshSessionHistory, removeJob, sessionId, syncUrlWithSession, upsertJob]
+    [contentMode, orderedJobs, outputLanguage, pollJob, primaryAspectRatio, refreshSessionHistory, removeJob, sessionId, syncUrlWithSession, upsertJob]
   );
 
   const submitInput = async (rawInput: string) => {
@@ -1937,6 +1945,18 @@ export default function HomePage() {
                   {SUPPORTED_LANGUAGE_CODES.map((code) => (
                     <option key={code} value={code}>
                       {LANGUAGE_LABELS[code]}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={contentMode}
+                  onChange={(event) => setContentMode(event.target.value as ContentMode)}
+                  className="vf-language-select"
+                  aria-label="Content mode"
+                >
+                  {CONTENT_MODE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>

@@ -16,6 +16,7 @@ import { runConversion } from "@/lib/orchestrator";
 import { buildArtifactsForGenerate, planRerun, runRevisionEngine } from "@/lib/revision/engine";
 import { recordStyleHookMemory } from "@/lib/memory/style-hook-memory";
 import { snapshotUsage } from "@/lib/llm/usage-tracker";
+import { normalizeContentMode } from "@/lib/types/skills";
 
 type PersistedState = {
   sessions: Record<string, SessionRecord>;
@@ -129,6 +130,7 @@ function toRequest(payload: SessionPayload): ConversionRequest {
     tone: payload.tone,
     outputLanguage: payload.outputLanguage,
     generationMode: payload.generationMode,
+    contentMode: normalizeContentMode(payload.contentMode),
     reviewMode: payload.reviewMode,
     brand: {
       stylePreset: payload.stylePreset
@@ -205,6 +207,10 @@ function loadStateIfNeeded(): void {
       }
       if (!Array.isArray(normalized.artifacts)) {
         normalized.artifacts = [];
+        changed = true;
+      }
+      if (!normalized.payload.contentMode) {
+        normalized.payload.contentMode = "longform_digest";
         changed = true;
       }
 
@@ -853,6 +859,7 @@ export function serializeJob(job: JobRecord): {
   revision_intent?: JobRecord["revisionIntent"];
   input_text: string;
   source_input_text?: string;
+  content_mode: JobRecord["payload"]["contentMode"];
   status: JobStatus;
   progress: number;
   stage: string;
@@ -876,6 +883,7 @@ export function serializeJob(job: JobRecord): {
     revision_intent: job.revisionIntent,
     input_text: job.payload.inputText,
     source_input_text: job.payload.sourceInputText,
+    content_mode: job.payload.contentMode,
     status: job.status,
     progress: job.progress,
     stage: job.stage,

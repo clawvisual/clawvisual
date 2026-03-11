@@ -4,6 +4,39 @@ import { clampNumber } from "@/lib/skills/utils";
 import { splitSentences } from "@/lib/skills/utils";
 import type { ConversionContext } from "@/lib/types/skills";
 
+function getDistillPolicy(mode: ConversionContext["request"]["contentMode"]) {
+  if (mode === "product_marketing") {
+    return {
+      defaultSlides: 6,
+      minPoints: 3,
+      maxPoints: 7,
+      charsPerPoint: 300,
+      objective:
+        "Extract conversion-critical points: user pain, differentiator, proof, and action trigger. Keep each point short and persuasive."
+    };
+  }
+
+  if (mode === "trend_hotspot") {
+    return {
+      defaultSlides: 4,
+      minPoints: 2,
+      maxPoints: 5,
+      charsPerPoint: 420,
+      objective:
+        "Extract high-signal hot takes: what happened, why it matters now, and what to do next. Prioritize speed and punch."
+    };
+  }
+
+  return {
+    defaultSlides: 4,
+    minPoints: 2,
+    maxPoints: 8,
+    charsPerPoint: 560,
+    objective:
+      "Extract the source's key facts and logic with maximum information coverage while staying concise for slide storytelling."
+  };
+}
+
 function sanitizeSentence(sentence: string): string {
   return sentence
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
@@ -40,12 +73,17 @@ function fallbackDistill(inputText: string, target: number): string[] {
 }
 
 export async function skill01Distiller(context: ConversionContext): Promise<ConversionContext> {
+  const policy = getDistillPolicy(context.request.contentMode);
   const requestedSlides = Number.isFinite(context.request.targetSlides)
-    ? clampNumber(Number(context.request.targetSlides), 1, 8)
-    : 8;
+    ? clampNumber(Number(context.request.targetSlides), 1, policy.maxPoints)
+    : policy.defaultSlides;
   const inputChars = context.request.inputText.replace(/\s+/g, "").length;
-  const estimatedByLength = clampNumber(Math.ceil(inputChars / 240), 1, 8);
-  const target = clampNumber(Math.min(requestedSlides, estimatedByLength), 1, 8);
+  const estimatedByLength = clampNumber(Math.ceil(inputChars / policy.charsPerPoint), policy.minPoints, policy.maxPoints);
+  const target = clampNumber(
+    Math.min(requestedSlides, Math.max(estimatedByLength, policy.minPoints)),
+    policy.minPoints,
+    policy.maxPoints
+  );
 
   const llmResult = await callSkillLlmJson<{ core_points?: string[]; corePoints?: string[] }>({
     skill: "distiller",
@@ -54,10 +92,13 @@ export async function skill01Distiller(context: ConversionContext): Promise<Conv
       target_points: target,
       tone: context.request.tone,
       mode: context.request.generationMode,
-      objective:
+      content_mode: context.request.contentMode,
+      objective: [
+        policy.objective,
         context.request.generationMode === "quote_slides"
-          ? "Extract the 'Minimum Viable Insight' (MVI) from the source. Transform the input into sharp, rhythmic punchlines. Eliminate all transitional phrases (e.g., 'In conclusion', 'Another point is'). Ensure each point has a high signal-to-noise ratio and provides enough 'narrative tension' to sustain a standalone slide."
-          : "Distill source text into concise segmented summaries for slides."
+          ? "For quote_slides mode, keep points punchy and standalone with high signal-to-noise."
+          : "For standard mode, keep each point compact but explanatory."
+      ].join(" ")
     },
     outputSchemaHint: '{"core_points": ["point1", "point2"]}',
     outputLanguage: context.request.outputLanguage,

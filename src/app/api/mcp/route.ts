@@ -5,6 +5,7 @@ import { validateApiKey } from "@/lib/auth/api-key";
 import { createJob, createRevisionJob, getJob, serializeJob } from "@/lib/queue/job-store";
 import { DEFAULT_NEGATIVE_PROMPT, generateNanoBananaImage } from "@/lib/images/nano-banana";
 import type { RevisePayload } from "@/lib/types/job";
+import { normalizeContentMode } from "@/lib/types/skills";
 
 export const runtime = "nodejs";
 
@@ -24,13 +25,14 @@ type ToolCallRequest = {
 
 const convertArgsSchema = z.object({
   session_id: z.string().uuid().optional(),
-  input_text: z.string().min(20),
+  input_text: z.string().min(8),
   max_slides: z.number().int().min(1).max(8).optional(),
   target_slides: z.number().int().min(1).max(8).optional(),
   aspect_ratios: z.array(z.enum(["4:5", "9:16", "1:1", "16:9"])).default(["4:5", "1:1"]),
   style_preset: z.string().default("auto"),
   tone: z.string().default("auto"),
   generation_mode: z.enum(["standard", "quote_slides"]).default("quote_slides"),
+  content_mode: z.enum(["longform_digest", "product_marketing", "trend_hotspot"]).default("longform_digest"),
   output_language: z.string().default("en-US"),
   review_mode: z.enum(["auto", "required"]).default("auto")
 }).transform((value) => ({
@@ -76,7 +78,12 @@ const TOOL_DEFINITIONS = [
       required: ["input_text"],
       properties: {
         session_id: { type: "string", format: "uuid" },
-        input_text: { type: "string", minLength: 20 },
+        input_text: {
+          type: "string",
+          minLength: 8,
+          description:
+            "Input URL or text. For longform_digest/product_marketing, 20+ chars is recommended. trend_hotspot supports shorter input."
+        },
         max_slides: {
           type: "integer",
           minimum: 1,
@@ -97,6 +104,11 @@ const TOOL_DEFINITIONS = [
         style_preset: { type: "string", default: "auto" },
         tone: { type: "string", default: "auto" },
         generation_mode: { type: "string", enum: ["standard", "quote_slides"], default: "quote_slides" },
+        content_mode: {
+          type: "string",
+          enum: ["longform_digest", "product_marketing", "trend_hotspot"],
+          default: "longform_digest"
+        },
         output_language: { type: "string", default: "en-US" },
         review_mode: { type: "string", enum: ["auto", "required"], default: "auto" }
       }
@@ -211,6 +223,15 @@ async function handleToolCall(params: ToolCallRequest) {
     }
 
     const payload = parsed.data;
+    const contentMode = normalizeContentMode(payload.content_mode);
+    if (contentMode !== "trend_hotspot" && payload.input_text.trim().length < 20) {
+      return toolResult(
+        {
+          error: "input_text should be at least 20 chars for longform_digest or product_marketing mode"
+        },
+        true
+      );
+    }
     const job = createJob(
       {
         inputText: payload.input_text,
@@ -220,6 +241,7 @@ async function handleToolCall(params: ToolCallRequest) {
         tone: payload.tone,
         outputLanguage: payload.output_language,
         generationMode: payload.generation_mode,
+        contentMode,
         reviewMode: payload.review_mode
       },
       { sessionId: payload.session_id }

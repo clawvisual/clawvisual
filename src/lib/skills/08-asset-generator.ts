@@ -98,6 +98,156 @@ function tokenizeCoreKeywords(input: string): string[] {
   return Array.from(new Set(terms)).slice(0, 8);
 }
 
+function trimLineNoEllipsis(value: string, maxChars: number): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  if (normalized.length <= maxChars) return normalized;
+
+  const sliced = normalized.slice(0, maxChars);
+  const lastSpace = sliced.lastIndexOf(" ");
+  if (lastSpace >= Math.floor(maxChars * 0.6)) {
+    return sliced.slice(0, lastSpace).trim();
+  }
+  return sliced.trim();
+}
+
+function stripOuterQuotes(value: string): string {
+  let text = value.trim();
+  const pairs: Record<string, string> = {
+    "\"": "\"",
+    "'": "'",
+    "“": "”",
+    "‘": "’",
+    "「": "」",
+    "『": "』"
+  };
+
+  while (text.length >= 2) {
+    const first = text[0];
+    const last = text[text.length - 1];
+    if (pairs[first] && pairs[first] === last) {
+      text = text.slice(1, -1).trim();
+      continue;
+    }
+    break;
+  }
+
+  return text.replace(/^[`"'“”‘’]+/, "").replace(/[`"'“”‘’]+$/, "").trim();
+}
+
+function stripHierarchyLabelPrefix(value: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+
+  const stripped = normalized
+    .replace(/^(?:h[1-6]|heading|title|subtitle|subheading|body)\s*[:：-]\s*/i, "")
+    .replace(/^h[1-6]\s+/i, "")
+    .trim();
+
+  if (/^(?:h[1-6]|heading|title|subtitle|subheading|body)$/i.test(stripped)) {
+    return "";
+  }
+  return stripOuterQuotes(stripped);
+}
+
+function normalizeLockedTextLine(value: string, maxChars: number): string {
+  return trimLineNoEllipsis(stripHierarchyLabelPrefix(value), maxChars);
+}
+
+function splitDenseTextIntoLines(text: string, maxCharsPerLine: number): string[] {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return [];
+
+  return normalized
+    .split(/(?:[。！？!?；;]+|\.\s+|\n+)/g)
+    .map((item) => item.trim())
+    .map((item) => normalizeLockedTextLine(item, maxCharsPerLine))
+    .filter(Boolean);
+}
+
+function buildLongformLockedTextLines(heading: string, bodyText: string, supplementalLines: string[] = []): string[] {
+  const headingLine = normalizeLockedTextLine(heading, 48);
+  const bodyLines = splitDenseTextIntoLines(bodyText, 52);
+  const supplementLines = supplementalLines.map((item) => normalizeLockedTextLine(item, 52)).filter(Boolean);
+  const merged = [headingLine, ...supplementLines, ...bodyLines]
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0 && /[\p{L}\p{N}]/u.test(item));
+  return Array.from(new Set(merged)).slice(0, 5);
+}
+
+function buildLongformCardTopicHints(plan: PromptPlan): string {
+  const fromAssociations = plan.visualAssociations
+    .map((item) => item.keyword.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+  const fromCore = plan.coreKeywords.map((item) => item.trim()).filter(Boolean).slice(0, 5);
+  const merged = Array.from(new Set([...fromAssociations, ...fromCore])).slice(0, 5);
+  return merged.join(", ");
+}
+
+function pickLongformCardCount(isCoverSlide: boolean, lockedLineHints: string[]): number {
+  if (isCoverSlide) {
+    const requested = lockedLineHints.length || 5;
+    return Math.max(4, Math.min(5, requested));
+  }
+  const requested = lockedLineHints.length || 3;
+  return Math.max(2, Math.min(4, requested));
+}
+
+function resolveLongformStyleAnchor(plan: PromptPlan): string {
+  const archetype = plan.styleArchetype.toLowerCase();
+  if (archetype === "data_drama") return "clean data-forward infographic";
+  if (archetype === "human_story") return "human-centered narrative infographic";
+  if (archetype === "cinematic_minimal") return "minimal high-contrast editorial infographic";
+  return "clean editorial infographic";
+}
+
+function composeLongformCompactPrompt(params: {
+  plan: PromptPlan;
+  aspectRatio: AspectRatio;
+  lockedLineHints: string[];
+}): string {
+  const isCoverSlide = params.plan.index === 1;
+  const cardCount = pickLongformCardCount(isCoverSlide, params.lockedLineHints);
+  const topicHints = buildLongformCardTopicHints(params.plan) || "core ideas from the source text";
+  const styleAnchor = resolveLongformStyleAnchor(params.plan);
+  const styleHintKeywords = params.plan.styleKeywords
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(", ");
+  const textLines = params.lockedLineHints
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, cardCount);
+
+  const lines = [
+    `A professional ${styleAnchor} layout with a single central anchor subject: ${truncate(params.plan.heroSubject, 120)}.`,
+    `Around the center, ${cardCount} distinct rectangular information cards in a clean balanced grid, numbered 1 to ${cardCount}.`,
+    `Each card should include a simple icon or micro-scene related to: ${truncate(topicHints, 180)}.`,
+    `Style direction: ${truncate(styleHintKeywords || "high clarity, clean composition", 140)}.`,
+    "High clarity, minimal decoration, consistent spacing, readable typography.",
+    "Background should be plain white or light neutral with subtle texture; avoid complex scenery and photoreal cinematic effects.",
+    `Aspect ratio ${params.aspectRatio}.`
+  ];
+
+  if (textLines.length) {
+    lines.push(
+      `Render exactly these text lines on the cards (no rewrite): ${JSON.stringify(textLines)}.`,
+      "Distribute one text line per card when possible; keep copy concise and high-contrast."
+    );
+  } else {
+    lines.push("Use concise, high-signal short text snippets on cards; avoid long paragraphs.");
+  }
+
+  lines.push(
+    "Do not render random extra words, subtitles, code-like labels, or placeholder tokens.",
+    "No watermark, no logo, no palette legend."
+  );
+
+  return lines.join("\n");
+}
+
 function buildNeutralAssociations(keywords: string[]): Array<{ keyword: string; visual: string }> {
   return keywords.slice(0, 5).map((keyword) => ({
     keyword,
@@ -191,6 +341,8 @@ function fallbackPromptPlan(
   const visualAssociations = buildNeutralAssociations(coreKeywords);
   const associationText = visualAssociations.map((item) => `${item.keyword} -> ${item.visual}`).join("; ");
 
+  const isLongformDigest = context.request.contentMode === "longform_digest";
+
   return {
     index: visual.index,
     coreKeywords,
@@ -198,36 +350,66 @@ function fallbackPromptPlan(
     diagramType: visual.metaphorPlan?.diagramType ?? "metaphor",
     entityTags: visual.metaphorPlan?.entityTags ?? [],
     metricTags: visual.metaphorPlan?.metricTags ?? [],
-    subject: visual.metaphorPlan?.visualDescription || visual.metaphor || "A symbolic scene aligned with the slide meaning",
-    sceneDirection: `${associationText || "keyword-driven symbolic scene"}, aligned with slide statement meaning`,
+    subject: isLongformDigest
+      ? isCoverSlide
+        ? `An information-dense cover infographic that summarizes key ideas for: ${visual.hierarchy.body}`
+        : `An explanatory, information-first visual for: ${visual.hierarchy.body}`
+      : visual.metaphorPlan?.visualDescription || visual.metaphor || "A symbolic scene aligned with the slide meaning",
+    sceneDirection: isLongformDigest
+      ? isCoverSlide
+        ? `simple central anchor icon/character with 3-5 clean information cards; plain background; minimal props; avoid complex scenery; ${associationText || "keyword-driven structure"}`
+        : `simple central anchor with 2-4 structured information cards; plain background; avoid scenic details; ${associationText || "keyword-driven structure"}`
+      : `${associationText || "keyword-driven symbolic scene"}, aligned with slide statement meaning`,
     composition: compositionHint.composition,
-    artStyle: isCoverSlide
+    artStyle: isLongformDigest
+      ? "clean infographic poster style, flat or hand-drawn illustration, simple shapes, high readability, minimal decoration"
+      : isCoverSlide
       ? `${context.request.brand.stylePreset} style, bold editorial cover composition, dramatic but clean, ${styleProfile.recommendedTone} tone`
       : `${context.request.brand.stylePreset} style, editorial illustration tuned to ${styleProfile.visualDomain} context, ${styleProfile.recommendedTone} tone`,
-    lightingMood: "cinematic soft lighting, clear contrast, platform-ready social visual quality",
+    lightingMood: isLongformDigest
+      ? "flat even lighting, low visual noise, readability-first contrast"
+      : "cinematic soft lighting, clear contrast, platform-ready social visual quality",
     colorDirection: colors
-      ? "cool cyan and emerald accents with deep navy contrast"
+      ? isLongformDigest
+        ? "light neutral background with 2-3 restrained accent colors and strong text contrast"
+        : "cool cyan and emerald accents with deep navy contrast"
       : "balanced neutral tones with restrained accents",
     typography: {
       fontFamily: "Sans-serif",
       fontWeight: "Bold",
       position: "top-center"
     },
-    technicalSpecs: `hyper-realistic, sharp details, uncluttered, ${noTextSpec}, 8k, --ar ${aspectRatio}`,
+    technicalSpecs: isLongformDigest
+      ? `clean infographic rendering, simple background, consistent card spacing, uncluttered, ${noTextSpec}, --ar ${aspectRatio}`
+      : `hyper-realistic, sharp details, uncluttered, ${noTextSpec}, 8k, --ar ${aspectRatio}`,
     textOnImage,
     styleKeywords: styleProfile.styleKeywords,
     negativeStyleKeywords: styleProfile.negativeKeywords,
     globalDirection: styleProfile.globalDirection,
     styleArchetype: styleProfile.styleArchetype ?? "editorial_bold",
-    heroSubject: visual.metaphorPlan?.heroSubject || visual.metaphorPlan?.metaphorName || "single dominant symbolic hero",
-    cameraAngle: visual.metaphorPlan?.cameraAngle || "eye-level medium close shot",
-    depthLayers: visual.metaphorPlan?.depthLayers || "foreground anchor, midground hero subject, soft background context",
-    motionCue: visual.metaphorPlan?.motionCue || "directional tension pointing to the hero subject",
+    heroSubject: isLongformDigest
+      ? visual.metaphorPlan?.heroSubject || "one simple central anchor icon"
+      : visual.metaphorPlan?.heroSubject || visual.metaphorPlan?.metaphorName || "single dominant symbolic hero",
+    cameraAngle: isLongformDigest
+      ? "frontal editorial view"
+      : visual.metaphorPlan?.cameraAngle || "eye-level medium close shot",
+    depthLayers: isLongformDigest
+      ? "single foreground anchor with minimal background"
+      : visual.metaphorPlan?.depthLayers || "foreground anchor, midground hero subject, soft background context",
+    motionCue: isLongformDigest
+      ? "static structured layout emphasis"
+      : visual.metaphorPlan?.motionCue || "directional tension pointing to the hero subject",
     emotionalTrigger: visual.metaphorPlan?.emotionalTrigger || "high-stakes clarity",
-    surpriseElement: isCoverSlide
+    surpriseElement: isLongformDigest
+      ? "none; prioritize clean informational structure"
+      : isCoverSlide
       ? "cover-level visual hook with unexpected angle or dramatic perspective shift"
       : "one unexpected but relevant visual twist",
-    firstGlanceRule: isCoverSlide
+    firstGlanceRule: isLongformDigest
+      ? isCoverSlide
+        ? "viewer should grasp the topic plus 3-5 key points in one glance"
+        : "viewer should understand core meaning in one glance without metaphor guessing"
+      : isCoverSlide
       ? "cover headline intent must be instantly readable in under 0.3 seconds while scrolling"
       : "main idea recognizable within 0.3 seconds at mobile feed speed",
     allowLabelAnchors: false
@@ -300,11 +482,26 @@ function composePrompt(
   plan: PromptPlan,
   quoteText: string,
   aspectRatio: AspectRatio,
-  outputLanguage: string
+  outputLanguage: string,
+  contentMode: ConversionContext["request"]["contentMode"],
+  exactTextLines: string[]
 ): string {
   const withAspect = plan.technicalSpecs.includes("--ar")
     ? plan.technicalSpecs
     : `${plan.technicalSpecs}, --ar ${aspectRatio}`;
+  const lockedLineHints = exactTextLines
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 5);
+
+  if (contentMode === "longform_digest") {
+    return composeLongformCompactPrompt({
+      plan,
+      aspectRatio,
+      lockedLineHints
+    });
+  }
+
   const canLockQuote = shouldLockTextForOutputLanguage(quoteText, outputLanguage);
 
   const associationLine = plan.visualAssociations
@@ -358,7 +555,13 @@ function composePrompt(
     );
   }
 
-  if (plan.textOnImage && quoteText && canLockQuote) {
+  if (plan.textOnImage && lockedLineHints.length) {
+    lines.push(
+      `Render exactly these text lines without any translation or rewrite: ${JSON.stringify(lockedLineHints)}.`,
+      `Typography rule: ${plan.typography.fontWeight} ${plan.typography.fontFamily}, position ${plan.typography.position}, high readability.`,
+      "Do not add any other text, subtitle, or translation."
+    );
+  } else if (plan.textOnImage && quoteText && canLockQuote) {
     lines.push(
       `Render exactly this original slide text without any translation or rewrite: ${JSON.stringify(quoteText)}.`,
       `Typography rule: ${plan.typography.fontWeight} ${plan.typography.fontFamily}, position ${plan.typography.position}, high readability.`,
@@ -388,6 +591,10 @@ async function buildPromptPlans(context: ConversionContext, aspectRatio: AspectR
     context.visuals.map((visual) => [visual.index, fallbackPromptPlan(context, visual, aspectRatio)] as const)
   );
 
+  if (context.request.contentMode === "longform_digest") {
+    return fallbackPlans;
+  }
+
   const textOnImage = context.request.generationMode === "quote_slides";
 
   const llmResult = await callSkillLlmJson<{
@@ -398,6 +605,7 @@ async function buildPromptPlans(context: ConversionContext, aspectRatio: AspectR
       objective: textOnImage
         ? "Use four steps for each slide prompt: 1) intent parsing (core keywords), 2) context-aware visual association mapping, 3) strict text rendering rule (exact slide quote), 4) style treatment with professional consistency. Must satisfy feed-stopping composition and first-glance recognition in 0.3 seconds. For cover slide (index=1), apply extra-bold hook-first visual strategy."
         : "Use four steps for each slide prompt: context-aware intent parsing, visual association, typography-safe composition, style treatment. Must satisfy feed-stopping composition and first-glance recognition in 0.3 seconds. For cover slide (index=1), apply extra-bold hook-first visual strategy.",
+      content_mode: context.request.contentMode,
       source_text: context.request.inputText,
       ratio: aspectRatio,
       style: {
@@ -435,6 +643,7 @@ async function buildPromptPlans(context: ConversionContext, aspectRatio: AspectR
           "one controlled surprise element",
           "avoid generic stock-photo composition"
         ],
+        mode_rules: [],
         cover_rules: [
           "index=1 must be extra bold, hook-first, and visually explosive but clean",
           "index=1 should prioritize curiosity and instant recognition in social feed",
@@ -469,7 +678,6 @@ export async function skill08AssetGenerator(context: ConversionContext): Promise
       const storyboardQuote =
         context.storyboard.find((item) => item.index === visual.index)?.script ?? visual.hierarchy.body;
       const quote = storyboardQuote.replace(/\s+/g, " ").trim();
-      const prompt = composePrompt(plan, quote, aspectRatio, outputLanguage);
       const lockedTexts: string[] = [];
       const compositionHint = compositionPlanToHint(visual.metaphorPlan?.compositionPlan ?? "centered");
       const styleTag =
@@ -478,13 +686,29 @@ export async function skill08AssetGenerator(context: ConversionContext): Promise
         context.request.brand.stylePreset;
 
       if (plan.textOnImage && shouldLockTextForOutputLanguage(quote, outputLanguage)) {
-        // Keep slide text immutable on image generation.
-        lockedTexts.push(quote);
+        if (context.request.contentMode === "longform_digest") {
+          const coverSupplement = visual.index === 1 ? context.corePoints.slice(0, 5) : [];
+          lockedTexts.push(...buildLongformLockedTextLines(visual.hierarchy.heading, quote, coverSupplement));
+        } else {
+          // Keep slide text immutable on image generation.
+          lockedTexts.push(quote);
+        }
       }
       if (plan.textOnImage) {
-        const supplementalLockedTexts = disallowHan ? [] : [...plan.entityTags, ...plan.metricTags];
-        lockedTexts.push(...filterLockedTextsForOutputLanguage(supplementalLockedTexts, outputLanguage));
+        if (context.request.contentMode !== "longform_digest") {
+          const supplementalLockedTexts = disallowHan ? [] : [...plan.entityTags, ...plan.metricTags];
+          lockedTexts.push(...filterLockedTextsForOutputLanguage(supplementalLockedTexts, outputLanguage));
+        }
       }
+      const filteredLockedTexts = filterLockedTextsForOutputLanguage(lockedTexts, outputLanguage);
+      const prompt = composePrompt(
+        plan,
+        quote,
+        aspectRatio,
+        outputLanguage,
+        context.request.contentMode,
+        filteredLockedTexts
+      );
 
       const negativePrompt = plan.textOnImage
         ? NEGATIVE_PROMPT_WITH_TEXT_ON_IMAGE
@@ -503,7 +727,7 @@ export async function skill08AssetGenerator(context: ConversionContext): Promise
         aspectRatio,
         seed: visual.index,
         textOnImage: plan.textOnImage,
-        lockedTexts
+        lockedTexts: filteredLockedTexts
       });
 
       return {

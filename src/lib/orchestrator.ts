@@ -60,6 +60,10 @@ function createInitialContext(request: ConversionRequest): ConversionContext {
   };
 }
 
+function shouldForceTrendIntel(mode: ConversionRequest["contentMode"]): boolean {
+  return mode === "trend_hotspot";
+}
+
 function truncate(value: string, max = 200): string {
   const normalized = value.replace(/\s+/g, " ").trim();
   if (!normalized) return "";
@@ -218,7 +222,7 @@ export async function runConversion(
   const skillLogs: ConversionResult["skill_logs"] = [];
   const enrichedRequest = await skill00InputProcessor(request);
   const inputProcessorPreview = truncate(
-    `source=${enrichedRequest.sourceType ?? "text"} title=${enrichedRequest.sourceTitle ?? "n/a"} chars=${enrichedRequest.inputText.length}`
+    `mode=${enrichedRequest.contentMode} source=${enrichedRequest.sourceType ?? "text"} title=${enrichedRequest.sourceTitle ?? "n/a"} chars=${enrichedRequest.inputText.length}`
   );
   skillLogs.push({
     skill_name: "skill_00_input_processor",
@@ -289,7 +293,8 @@ export async function runConversion(
 
   // Stage order is intentionally linear: extract signal -> structure narrative -> design -> audit -> finalize.
   await run("skill_01_distiller", 8, skill01Distiller);
-  if ((appConfig.pipeline.enableSourceIntel || !isFastMode) && !isTimedOut()) {
+  const forceTrendIntel = shouldForceTrendIntel(enrichedRequest.contentMode);
+  if ((appConfig.pipeline.enableSourceIntel || !isFastMode || forceTrendIntel) && !isTimedOut()) {
     await run("skill_14_source_grounder", 12, skill14SourceGrounder);
     await run("skill_15_trend_miner", 14, skill15TrendMiner);
   } else {
@@ -317,7 +322,7 @@ export async function runConversion(
   await run("skill_04_metaphorist", 32, skill04Metaphorist);
   await run("skill_05_layout_selector", 40, skill05LayoutSelector);
   await run("skill_06_hierarchy_mapper", 48, skill06HierarchyMapper);
-  if ((appConfig.pipeline.enableStyleRecommender || !isFastMode) && !isTimedOut()) {
+  if ((appConfig.pipeline.enableStyleRecommender || !isFastMode || context.request.contentMode === "longform_digest") && !isTimedOut()) {
     await run("skill_13_style_recommender", 56, skill13StyleRecommender);
   } else {
     await pushSkipLog("skill_13_style_recommender", 56, isTimedOut() ? "pipeline_budget" : "fast_mode");
@@ -347,7 +352,11 @@ export async function runConversion(
   }
   await run("skill_09_typographer", 84, skill09Typographer);
   await run("skill_10_auto_resizer", 90, skill10AutoResizer);
-  await run("skill_11_attention_auditor", 96, skill11AttentionAuditor);
+  if ((appConfig.pipeline.enableAttentionAuditor || !isFastMode) && !isTimedOut()) {
+    await run("skill_11_attention_auditor", 96, skill11AttentionAuditor);
+  } else {
+    await pushSkipLog("skill_11_attention_auditor", 96, isTimedOut() ? "pipeline_budget" : "fast_mode");
+  }
   if ((appConfig.pipeline.enableAttentionFixer || !isFastMode) && !isTimedOut()) {
     await run("skill_16_attention_fixer", 97, skill16AttentionFixer);
   } else {

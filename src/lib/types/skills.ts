@@ -1,7 +1,21 @@
 export type AspectRatio = "4:5" | "9:16" | "1:1" | "16:9";
 export type GenerationMode = "standard" | "quote_slides";
+export type ContentMode = "longform_digest" | "product_marketing" | "trend_hotspot";
 export type PlatformType = "RedBook" | "Twitter" | "Instagram" | "TikTok" | "LinkedIn";
 export type SkillStatus = "running" | "completed" | "failed";
+
+export const CONTENT_MODE_OPTIONS: ContentMode[] = [
+  "longform_digest",
+  "product_marketing",
+  "trend_hotspot"
+];
+
+export function normalizeContentMode(value?: string): ContentMode {
+  if (value === "product_marketing" || value === "trend_hotspot" || value === "longform_digest") {
+    return value;
+  }
+  return "longform_digest";
+}
 
 export type LayoutTemplate =
   | "TEMPLATE_COVER"
@@ -115,6 +129,7 @@ export interface ConversionRequest {
   tone: string;
   outputLanguage: string;
   generationMode: GenerationMode;
+  contentMode: ContentMode;
   sourceType?: "url" | "text";
   sourceUrl?: string;
   sourceTitle?: string;

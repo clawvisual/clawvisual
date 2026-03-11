@@ -28,7 +28,12 @@ export function createOpenApiDocument() {
               format: "uuid",
               description: "Conversation/session identifier. Reuse for multi-turn conversation continuity."
             },
-            input_text: { type: "string" },
+            input_text: {
+              type: "string",
+              minLength: 8,
+              description:
+                "Input URL or text. For longform_digest/product_marketing, 20+ chars is recommended. trend_hotspot supports shorter input."
+            },
             max_slides: {
               type: "integer",
               minimum: 1,
@@ -53,6 +58,12 @@ export function createOpenApiDocument() {
               type: "string",
               enum: ["standard", "quote_slides"],
               default: "quote_slides"
+            },
+            content_mode: {
+              type: "string",
+              enum: ["longform_digest", "product_marketing", "trend_hotspot"],
+              default: "longform_digest",
+              description: "Business objective mode: digest, conversion, or trend hotspot."
             },
             review_mode: {
               type: "string",

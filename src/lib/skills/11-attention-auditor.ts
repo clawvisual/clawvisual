@@ -1,6 +1,20 @@
 import { callSkillLlmJson } from "@/lib/llm/skill-client";
 import type { AttentionAudit, ConversionContext } from "@/lib/types/skills";
 
+function compactAuditScript(script: string, maxChars = 220): string {
+  const normalized = script.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  if (normalized.length <= maxChars) return normalized;
+  return `${normalized.slice(0, maxChars - 1).trim()}...`;
+}
+
+function toAuditImageRef(imageUrl: string): string {
+  const normalized = String(imageUrl ?? "").trim();
+  // Avoid passing huge inline base64 blobs to text-only LLM calls.
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  return "";
+}
+
 function fallbackAudits(context: ConversionContext): AttentionAudit[] {
   return context.compositions.map((composition) => {
     const length = composition.script.length;
@@ -57,9 +71,9 @@ export async function skill11AttentionAuditor(context: ConversionContext): Promi
     input: {
       slides: context.compositions.map((composition) => ({
         index: composition.index,
-        script: composition.script,
+        script: compactAuditScript(composition.script),
         layout: composition.layout,
-        image_url: composition.imageUrl
+        image_url: toAuditImageRef(composition.imageUrl)
       }))
     },
     outputSchemaHint:
