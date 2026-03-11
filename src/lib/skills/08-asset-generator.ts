@@ -92,9 +92,55 @@ function sanitizeColorDirection(value: string): string {
 }
 
 function tokenizeCoreKeywords(input: string): string[] {
+  const englishStopwords = new Set([
+    "the",
+    "and",
+    "for",
+    "with",
+    "from",
+    "into",
+    "your",
+    "that",
+    "this",
+    "these",
+    "those",
+    "is",
+    "are",
+    "was",
+    "were",
+    "been",
+    "being",
+    "have",
+    "has",
+    "had",
+    "will",
+    "would",
+    "should",
+    "could",
+    "about",
+    "not",
+    "isn",
+    "aren",
+    "wasn",
+    "weren",
+    "don",
+    "doesn",
+    "didn",
+    "won",
+    "can",
+    "cant",
+    "job"
+  ]);
   const terms = (input.match(/[\p{Script=Han}]{2,8}|[A-Za-z][A-Za-z-]{2,}/gu) ?? [])
     .map((item) => item.replace(/\s+/g, " ").trim().toLowerCase())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((term) => {
+      if (/^[a-z-]+$/.test(term)) {
+        if (term.length < 4) return false;
+        if (englishStopwords.has(term)) return false;
+      }
+      return true;
+    });
   return Array.from(new Set(terms)).slice(0, 8);
 }
 
@@ -135,6 +181,160 @@ function stripOuterQuotes(value: string): string {
   return text.replace(/^[`"'“”‘’]+/, "").replace(/[`"'“”‘’]+$/, "").trim();
 }
 
+function trimTrailingConnectorsForEnglish(value: string): string {
+  const tokens = value.split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) return value.trim();
+
+  const trailingConnectors = new Set([
+    "a",
+    "an",
+    "the",
+    "and",
+    "or",
+    "to",
+    "of",
+    "for",
+    "with",
+    "at",
+    "by",
+    "from",
+    "in",
+    "on",
+    "where",
+    "when",
+    "that",
+    "which",
+    "who",
+    "whose",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being"
+  ]);
+
+  while (tokens.length > 1) {
+    const rawTail = tokens[tokens.length - 1]?.toLowerCase() ?? "";
+    const tail = rawTail.replace(/^[^a-z]+|[^a-z]+$/g, "");
+    if (!tail || !trailingConnectors.has(tail)) break;
+    tokens.pop();
+  }
+
+  return tokens.join(" ").trim();
+}
+
+function looksTruncatedEnglishLine(value: string): boolean {
+  const text = value.replace(/\s+/g, " ").trim();
+  if (!text) return true;
+  if (!/[A-Za-z]/.test(text)) return false;
+  if (/[.!?]$/.test(text)) return false;
+
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length <= 1) return true;
+
+  const trailingConnectors = new Set([
+    "a",
+    "an",
+    "the",
+    "and",
+    "or",
+    "to",
+    "of",
+    "for",
+    "with",
+    "at",
+    "by",
+    "from",
+    "in",
+    "on",
+    "where",
+    "when",
+    "that",
+    "which",
+    "who",
+    "whose",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being"
+  ]);
+  const rawTail = words[words.length - 1]?.toLowerCase() ?? "";
+  const tail = rawTail.replace(/^[^a-z]+|[^a-z]+$/g, "");
+  if (tail && trailingConnectors.has(tail)) return true;
+
+  const tailAfterColon = text.split(":").pop()?.trim() ?? "";
+  const tailWords = tailAfterColon.split(/\s+/).filter(Boolean);
+  if (text.includes(":") && tailWords.length > 0 && tailWords.length <= 3) return true;
+
+  if (/[,:;\-]\s*$/.test(text)) return true;
+  return false;
+}
+
+function shortenToCompleteLine(value: string, maxChars: number): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  if (normalized.length <= maxChars) return normalized;
+
+  const clipWindow = normalized.slice(0, Math.min(normalized.length, maxChars + 24));
+
+  const sentenceMatches = Array.from(clipWindow.matchAll(/[.!?。！？]/g));
+  const sentenceCut = sentenceMatches
+    .map((match) => (match.index == null ? -1 : match.index + 1))
+    .filter((index) => index > 0 && index <= maxChars)
+    .pop();
+  if (sentenceCut && sentenceCut >= Math.floor(maxChars * 0.55)) {
+    return clipWindow.slice(0, sentenceCut).trim();
+  }
+
+  const clauseMatches = Array.from(clipWindow.matchAll(/[:;，；：,]/g));
+  const clauseCut = clauseMatches
+    .map((match) => (match.index == null ? -1 : match.index))
+    .filter((index) => index > 0 && index <= maxChars)
+    .pop();
+  if (clauseCut && clauseCut >= Math.floor(maxChars * 0.55)) {
+    return clipWindow.slice(0, clauseCut).replace(/[:;，；：,]\s*$/g, "").trim();
+  }
+
+  const byWords = trimLineNoEllipsis(normalized, maxChars);
+  const compacted = trimTrailingConnectorsForEnglish(byWords);
+  if (compacted.split(/\s+/).filter(Boolean).length >= 3) {
+    return compacted;
+  }
+  return "";
+}
+
+function cleanupIncompleteCardLine(value: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  if (!/[A-Za-z]/.test(normalized)) return normalized;
+
+  let text = normalized;
+  const sentenceComplete = /[.!?。！？]$/.test(text);
+
+  if (!sentenceComplete) {
+    text = trimTrailingConnectorsForEnglish(text);
+
+    const separatorMatch = text.match(/^(.*?)([:;,\-])\s*([^:;,\-]{1,24})$/);
+    if (separatorMatch?.[1] && separatorMatch?.[3]) {
+      const tail = separatorMatch[3].trim();
+      const tailWords = tail.split(/\s+/).filter(Boolean);
+      const tailLooksWeak =
+        tailWords.length <= 2 ||
+        (tailWords.length <= 3 && /^(true|false|good|bad|more|less|better|worse)$/i.test(tailWords[tailWords.length - 1] ?? ""));
+      if (tailLooksWeak) {
+        text = separatorMatch[1].trim();
+      }
+    }
+  }
+
+  return text.replace(/[:;,\-]\s*$/g, "").trim();
+}
+
 function stripHierarchyLabelPrefix(value: string): string {
   const normalized = value.replace(/\s+/g, " ").trim();
   if (!normalized) return "";
@@ -147,11 +347,18 @@ function stripHierarchyLabelPrefix(value: string): string {
   if (/^(?:h[1-6]|heading|title|subtitle|subheading|body)$/i.test(stripped)) {
     return "";
   }
-  return stripOuterQuotes(stripped);
+  return cleanupIncompleteCardLine(stripOuterQuotes(stripped));
 }
 
 function normalizeLockedTextLine(value: string, maxChars: number): string {
-  return trimLineNoEllipsis(stripHierarchyLabelPrefix(value), maxChars);
+  const cleaned = stripHierarchyLabelPrefix(value);
+  if (!cleaned) return "";
+  const shortened = shortenToCompleteLine(cleaned, maxChars);
+  if (!shortened) return "";
+  const normalized = cleanupIncompleteCardLine(shortened);
+  if (!normalized) return "";
+  if (looksTruncatedEnglishLine(normalized)) return "";
+  return normalized;
 }
 
 function splitDenseTextIntoLines(text: string, maxCharsPerLine: number): string[] {
@@ -167,8 +374,8 @@ function splitDenseTextIntoLines(text: string, maxCharsPerLine: number): string[
 
 function buildLongformLockedTextLines(heading: string, bodyText: string, supplementalLines: string[] = []): string[] {
   const headingLine = normalizeLockedTextLine(heading, 48);
-  const bodyLines = splitDenseTextIntoLines(bodyText, 52);
-  const supplementLines = supplementalLines.map((item) => normalizeLockedTextLine(item, 52)).filter(Boolean);
+  const bodyLines = splitDenseTextIntoLines(bodyText, 72);
+  const supplementLines = supplementalLines.map((item) => normalizeLockedTextLine(item, 72)).filter(Boolean);
   const merged = [headingLine, ...supplementLines, ...bodyLines]
     .map((item) => item.trim())
     .filter((item) => item.length > 0 && /[\p{L}\p{N}]/u.test(item));

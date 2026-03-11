@@ -38,12 +38,66 @@ function getDistillPolicy(mode: ConversionContext["request"]["contentMode"]) {
 }
 
 function sanitizeSentence(sentence: string): string {
-  return sentence
+  const cleaned = sentence
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/https?:\/\/\S+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+  const withoutOuterQuotes = cleaned
+    .replace(/^[`"'“”‘’]+/, "")
+    .replace(/[`"'“”‘’]+$/, "")
+    .trim();
+
+  const tokens = withoutOuterQuotes.split(/\s+/).filter(Boolean);
+  const trailingConnectors = new Set([
+    "a",
+    "an",
+    "the",
+    "and",
+    "or",
+    "to",
+    "of",
+    "for",
+    "with",
+    "at",
+    "by",
+    "from",
+    "in",
+    "on",
+    "where",
+    "when",
+    "that",
+    "which",
+    "who",
+    "whose",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being"
+  ]);
+
+  while (tokens.length > 1) {
+    const rawTail = tokens[tokens.length - 1]?.toLowerCase() ?? "";
+    const tail = rawTail.replace(/^[^a-z]+|[^a-z]+$/g, "");
+    if (!tail || !trailingConnectors.has(tail)) break;
+    tokens.pop();
+  }
+
+  let normalized = tokens.join(" ").trim();
+  const separatorMatch = normalized.match(/^(.*?)([:;,\-])\s*([^:;,\-]{1,24})$/);
+  if (separatorMatch?.[1] && separatorMatch?.[3]) {
+    const tailWords = separatorMatch[3].trim().split(/\s+/).filter(Boolean);
+    if (tailWords.length <= 2) {
+      normalized = separatorMatch[1].trim();
+    }
+  }
+
+  return normalized.replace(/[:;,\-]\s*$/g, "").trim();
 }
 
 function isNoiseSentence(sentence: string): boolean {

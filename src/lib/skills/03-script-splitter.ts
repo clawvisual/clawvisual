@@ -58,12 +58,78 @@ function chunkByWordLimit(sentence: string, maxWords: number): string[] {
   return chunks;
 }
 
+function cleanupIncompleteScriptLine(value: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  if (!/[A-Za-z]/.test(normalized)) return normalized;
+
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  const trailingConnectors = new Set([
+    "a",
+    "an",
+    "the",
+    "and",
+    "or",
+    "to",
+    "of",
+    "for",
+    "with",
+    "at",
+    "by",
+    "from",
+    "in",
+    "on",
+    "where",
+    "when",
+    "that",
+    "which",
+    "who",
+    "whose",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being"
+  ]);
+
+  while (tokens.length > 1) {
+    const rawTail = tokens[tokens.length - 1]?.toLowerCase() ?? "";
+    const tail = rawTail.replace(/^[^a-z]+|[^a-z]+$/g, "");
+    if (!tail || !trailingConnectors.has(tail)) break;
+    tokens.pop();
+  }
+
+  let text = tokens.join(" ").trim();
+  const separatorMatch = text.match(/^(.*?)([:;,\-])\s*([^:;,\-]{1,24})$/);
+  if (separatorMatch?.[1] && separatorMatch?.[3]) {
+    const tailWords = separatorMatch[3].trim().split(/\s+/).filter(Boolean);
+    if (tailWords.length <= 2) {
+      text = separatorMatch[1].trim();
+    }
+  }
+
+  return text.replace(/[:;,\-]\s*$/g, "").trim();
+}
+
 function compactScript(script: string, maxWords: number, maxChars: number): string {
   const normalized = script.replace(/\s+/g, " ").trim();
   if (!normalized) return "";
 
   const byWords = normalized.split(/\s+/).slice(0, maxWords).join(" ");
-  return trimToMaxCharsNoEllipsis(byWords, maxChars);
+  const clipped = trimToMaxCharsNoEllipsis(byWords, maxChars);
+  const cleaned = cleanupIncompleteScriptLine(clipped);
+  if (cleaned) return cleaned;
+
+  const firstSentence = normalized
+    .split(/(?<=[.!?。！？])\s+/)
+    .map((item) => item.trim())
+    .find(Boolean);
+  if (!firstSentence) return clipped;
+
+  const sentenceClipped = trimToMaxCharsNoEllipsis(firstSentence, maxChars);
+  return cleanupIncompleteScriptLine(sentenceClipped) || sentenceClipped;
 }
 
 function scriptDedupKey(script: string): string {
