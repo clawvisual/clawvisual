@@ -20,6 +20,8 @@ Turn a long article or URL into a social-ready carousel (for X/Twitter, Instagra
 - Async job pipeline with progress events, revisions, and downloadable output
 - Supports portrait, square, story, and landscape output ratios
 - MCP-compatible, so other agents can call it as a tool
+- Topic-matched visual style generation (children/education, tech reporting, business/news), with consistent icon and typography style across slides
+- Current production focus is `longform_digest` mode
 
 ## Docs
 
@@ -162,12 +164,13 @@ docker run --rm -p 3000:3000 \
 ## Workflow
 
 1. Input URL or long-form text
-2. Run skill pipeline to generate hooks, slide copy, visuals, and hashtags
+2. Run pipeline: `skill_input_processor` -> `skill_content_planner` -> `skill_visual_prompt_planner` -> `skill_asset_generator` -> `skill_viral_optimizer`
 3. Poll async job status until completion
 4. Review output and optionally run revision actions (`rewrite_copy_style`, `regenerate_cover`, `regenerate_slides`)
 5. Export/download final assets
 
 In the web composer, use the `Aspect ratio` selector to switch between portrait, square, story, and landscape (`16:9`) outputs.
+In the left sidebar, click `Your chats` -> `Clear all` to remove all chat sessions at once.
 
 ## Quick Smoke Test
 
@@ -203,7 +206,8 @@ curl -X POST http://localhost:3000/api/v1/convert \
 
 Expected first-run behavior:
 - The job should be accepted immediately and return `202`.
-- In `fast` mode, several quality stages are intentionally reported as `skipped:fast_mode`.
+- In `fast` mode, pipeline appends `skill_quality_copy_polish`.
+- In `full` mode, pipeline additionally runs `skill_quality_post_copy_loop` and `skill_quality_final_audit`.
 - Without fully working external model/image credentials, some quality/image steps may degrade or fall back.
 - Leaving `NANO_BANANA_MODEL` as the template placeholder can trigger image-generation retries and fallback placeholder outputs.
 
@@ -277,11 +281,19 @@ Yes. Use the `skills/clawvisual` package and point it to your `CLAWVISUAL_MCP_UR
 
 - Framework: Next.js App Router + TypeScript
 - API:
-  - `POST /api/v1/convert` starts a 16-skill chain and returns `job_id`
+  - `POST /api/v1/convert` starts an async conversion pipeline and returns `job_id`
   - `GET /api/v1/jobs/:id` returns status/progress/result
   - `POST /api/mcp` JSON-RPC MCP endpoint (`initialize`, `tools/list`, `tools/call`)
   - `GET /api/openapi.json` exports OpenAPI schema
-- Skill system: `src/lib/skills` contains 16 atomic async skills
+- Skill system: `src/lib/skills` currently keeps the core longform chain:
+  - `input-processor.ts`
+  - `content-planner.ts`
+  - `visual-prompt-planner.ts`
+  - `asset-generator.ts`
+  - `viral-optimizer.ts`
+- Pipeline registry: `src/lib/pipeline/registry.ts` defines mode-driven stage lists:
+  - `longform_digest.fast`
+  - `longform_digest.full`
 - Prompt templates: `src/lib/prompts/index.ts`
 - Orchestration: `src/lib/orchestrator.ts`
 - Queue:
@@ -295,7 +307,8 @@ Yes. Use the `skills/clawvisual` package and point it to your `CLAWVISUAL_MCP_UR
 - `src/app/api/v1/jobs/[id]/route.ts`: job status endpoint
 - `src/app/api/openapi.json/route.ts`: OpenAPI export
 - `src/lib/types`: standard interfaces and context object
-- `src/lib/skills`: 16 atomic skill modules
+- `src/lib/skills`: core longform skill modules
+- `src/lib/pipeline/registry.ts`: pipeline stage registry by content mode and run mode (`fast`/`full`)
 
 ## Environment Variables
 
@@ -326,12 +339,6 @@ Existing keys are reusable. Current scaffold reads:
 - `QUALITY_IMAGE_AUDIT_SCOPE` (optional, `cover` or `all`, default `cover`)
 - `PIPELINE_MODE` (optional, `fast` or `full`, default `fast`)
 - `PIPELINE_MAX_DURATION_MS` (optional, default `300000`)
-- `PIPELINE_ENABLE_SOURCE_INTEL` (optional, default `false` in fast mode)
-- `PIPELINE_ENABLE_STORYBOARD_QUALITY` (optional, default `false` in fast mode)
-- `PIPELINE_ENABLE_STYLE_RECOMMENDER` (optional, default `false` in fast mode)
-- `PIPELINE_ENABLE_ATTENTION_FIXER` (optional, default `false` in fast mode)
-- `PIPELINE_ENABLE_POST_COPY_QUALITY` (optional, default `false` in fast mode)
-- `PIPELINE_ENABLE_FINAL_AUDIT` (optional, default `false` in fast mode)
 
 Runtime observability:
 - Thinking & Actions event timeline now includes per-step token usage deltas (`in/out/total`) when provider `usage` is returned.
