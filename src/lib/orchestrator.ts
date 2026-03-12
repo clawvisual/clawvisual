@@ -1,42 +1,23 @@
-import type { ConversionContext, ConversionRequest, ConversionResult } from "@/lib/types/skills";
-import { skill01Distiller } from "@/lib/skills/01-distiller";
-import { skill02HookArchitect } from "@/lib/skills/02-hook-architect";
-import { skill03ScriptSplitter } from "@/lib/skills/03-script-splitter";
-import { skill04Metaphorist } from "@/lib/skills/04-metaphorist";
-import { skill05LayoutSelector } from "@/lib/skills/05-layout-selector";
-import { skill06HierarchyMapper } from "@/lib/skills/06-hierarchy-mapper";
-import { skill07StyleMapper } from "@/lib/skills/07-style-mapper";
-import { skill08AssetGenerator } from "@/lib/skills/08-asset-generator";
-import { skill09Typographer } from "@/lib/skills/09-typographer";
-import { skill10AutoResizer } from "@/lib/skills/10-auto-resizer";
-import { skill11AttentionAuditor } from "@/lib/skills/11-attention-auditor";
-import { skill12ViralOptimizer } from "@/lib/skills/12-viral-optimizer";
-import { skill00InputProcessor } from "@/lib/skills/00-input-processor";
-import { skill13StyleRecommender } from "@/lib/skills/13-style-recommender";
-import { skill14SourceGrounder } from "@/lib/skills/14-source-grounder";
-import { skill15TrendMiner } from "@/lib/skills/15-trend-miner";
-import { skill16AttentionFixer } from "@/lib/skills/16-attention-fixer";
-import {
-  decideImageQualityLoopExecution,
-  runCopyPolishLoop,
-  runCoverReviewPack,
-  runFinalAuditRecovery,
-  runImageQualityLoop,
-  runPostCopyQualityLoop,
-  runStoryboardQualityLoop
-} from "@/lib/quality/loop";
 import { appConfig } from "@/lib/config";
 import { beginUsageScope, formatUsageSummary, snapshotUsage } from "@/lib/llm/usage-tracker";
+import { resolveContentPipeline } from "@/lib/pipeline/registry";
+import { runCopyPolishLoop, runCoverReviewPack, runFinalAuditRecovery, runPostCopyQualityLoop } from "@/lib/quality/loop";
+import { skillInputProcessor } from "@/lib/skills/input-processor";
+import { skillAssetGenerator } from "@/lib/skills/asset-generator";
+import { skillViralOptimizer } from "@/lib/skills/viral-optimizer";
+import { skillContentPlanner } from "@/lib/skills/content-planner";
+import { skillVisualPromptPlanner } from "@/lib/skills/visual-prompt-planner";
+import type { ConversionContext, ConversionRequest, ConversionResult } from "@/lib/types/skills";
 
 type ProgressCallback = (step: string, progress: number, outputPreview?: string) => Promise<void> | void;
 
 function createInitialContext(request: ConversionRequest): ConversionContext {
-  // Shared mutable context passed through all skills in the pipeline.
   return {
     request,
     corePoints: [],
     hooks: [],
     storyboard: [],
+    slideCardPlans: [],
     visuals: [],
     visualStyleProfile: {
       visualDomain: "general",
@@ -48,6 +29,7 @@ function createInitialContext(request: ConversionRequest): ConversionContext {
       rationale: "Default style profile."
     },
     theme: { cssVariables: {} },
+    assetPromptPlans: [],
     assets: [],
     compositions: [],
     resizedOutputs: [],
@@ -58,10 +40,6 @@ function createInitialContext(request: ConversionRequest): ConversionContext {
     caption: "",
     hashtags: []
   };
-}
-
-function shouldForceTrendIntel(mode: ConversionRequest["contentMode"]): boolean {
-  return mode === "trend_hotspot";
 }
 
 function truncate(value: string, max = 200): string {
@@ -151,219 +129,24 @@ function inferPlatformType(aspectRatio: ConversionRequest["aspectRatios"][number
   return "Instagram";
 }
 
-function buildSkillPreview(stage: string, context: ConversionContext): string {
+function buildCoreSkillPreview(stage: string, context: ConversionContext): string {
   switch (stage) {
-    case "skill_01_distiller":
-      return truncate(context.corePoints.slice(0, 2).join(" | "));
-    case "skill_14_source_grounder":
+    case "skill_content_planner":
       return truncate(
-        context.sourceEvidence
-          .slice(0, 2)
-          .map((item) => `${item.title} (${item.credibilityScore})`)
-          .join(" | ")
+        `title=${context.hooks[0] ?? "n/a"} slides=${context.storyboard.length} cards=${context.slideCardPlans.reduce((acc, item) => acc + item.cards.length, 0)}`
       );
-    case "skill_02_hook_architect":
-      return truncate(context.hooks[0] ?? "");
-    case "skill_03_script_splitter":
-      return truncate(context.storyboard.slice(0, 2).map((slide) => `#${slide.index} ${slide.script}`).join(" | "));
-    case "skill_04_metaphorist":
-      return truncate(context.visuals.slice(0, 2).map((item) => item.metaphor).join(" | "));
-    case "skill_05_layout_selector":
-      return truncate(context.visuals.slice(0, 3).map((item) => `#${item.index} ${item.layout}`).join(" | "));
-    case "skill_06_hierarchy_mapper":
-      return truncate(
-        context.visuals
-          .slice(0, 2)
-          .map((item) => `#${item.index} [${item.hierarchy.highlightKeywords.join(", ")}]`)
-          .join(" | ")
-      );
-    case "skill_07_style_mapper":
-      return truncate(JSON.stringify(context.theme.cssVariables));
-    case "skill_13_style_recommender":
-      return truncate(
-        `domain=${context.visualStyleProfile.visualDomain} preset=${context.visualStyleProfile.recommendedPreset} tone=${context.visualStyleProfile.recommendedTone}`
-      );
-    case "skill_08_asset_generator":
+    case "skill_visual_prompt_planner":
+      return truncate(context.assetPromptPlans.slice(0, 2).map((item) => `#${item.index} ${item.prompt}`).join(" | "));
+    case "skill_asset_generator":
       return truncate(context.assets.slice(0, 2).map((asset) => `#${asset.index} ${asset.prompt}`).join(" | "));
-    case "skill_09_typographer":
-      return truncate(context.compositions.slice(0, 2).map((slide) => `#${slide.index} ${slide.layout}`).join(" | "));
-    case "skill_10_auto_resizer":
-      return truncate(`generated ${context.resizedOutputs.length} resized outputs`);
-    case "skill_11_attention_auditor":
-      return truncate(
-        context.audits
-          .slice(0, 3)
-          .map((audit) => `#${audit.index} readability:${audit.readabilityScore}`)
-          .join(" | ")
-      );
-    case "skill_16_attention_fixer":
-      return truncate(context.assets.slice(0, 2).map((asset) => `#${asset.index} ${asset.imageUrl}`).join(" | "));
-    case "skill_15_trend_miner":
-      return truncate(context.trendSignals.slice(0, 5).map((item) => `#${item.tag}`).join(" "));
-    case "skill_12_viral_optimizer":
+    case "skill_viral_optimizer":
       return truncate(`${context.caption} ${context.hashtags.join(" ")}`);
     default:
       return "stage completed";
   }
 }
 
-export async function runConversion(
-  request: ConversionRequest,
-  onProgress?: ProgressCallback
-): Promise<ConversionResult> {
-  // Track request-level token usage and enforce a hard pipeline deadline.
-  const usageScope = beginUsageScope();
-  const startedAt = Date.now();
-  const pipelineMaxMs = Math.max(120000, Number(appConfig.pipeline.maxDurationMs || 300000));
-  const deadlineAt = startedAt + pipelineMaxMs;
-  const isFastMode = appConfig.pipeline.mode === "fast";
-  const isTimedOut = () => Date.now() >= deadlineAt;
-
-  const skillLogs: ConversionResult["skill_logs"] = [];
-  const enrichedRequest = await skill00InputProcessor(request);
-  const inputProcessorPreview = truncate(
-    `mode=${enrichedRequest.contentMode} source=${enrichedRequest.sourceType ?? "text"} title=${enrichedRequest.sourceTitle ?? "n/a"} chars=${enrichedRequest.inputText.length}`
-  );
-  skillLogs.push({
-    skill_name: "skill_00_input_processor",
-    status: "completed",
-    output_preview: inputProcessorPreview
-  });
-  if (onProgress) {
-    await onProgress("skill_00_input_processor", 4, inputProcessorPreview);
-  }
-
-  let context = createInitialContext(enrichedRequest);
-
-  const pushSkipLog = async (step: string, progress: number, reason: string) => {
-    const preview = truncate(`skipped:${reason}`, 220);
-    skillLogs.push({
-      skill_name: step,
-      status: "completed",
-      output_preview: preview
-    });
-    if (onProgress) {
-      await onProgress(step, progress, preview);
-    }
-  };
-
-  const pushQualityLog = async (
-    step: string,
-    status: "completed" | "failed",
-    outputPreview: string,
-    progress: number
-  ) => {
-    const preview = truncate(outputPreview, 220);
-    skillLogs.push({
-      skill_name: step,
-      status,
-      output_preview: preview
-    });
-    if (onProgress) {
-      await onProgress(step, progress, preview);
-    }
-  };
-
-  const run = async (
-    step: string,
-    progress: number,
-    fn: (ctx: ConversionContext) => Promise<ConversionContext>
-  ) => {
-    // Uniform stage runner: executes a skill, writes preview logs, and emits progress.
-    try {
-      context = await fn(context);
-      const outputPreview = buildSkillPreview(step, context);
-      skillLogs.push({
-        skill_name: step,
-        status: "completed",
-        output_preview: outputPreview
-      });
-      if (onProgress) {
-        await onProgress(step, progress, outputPreview);
-      }
-    } catch (error) {
-      skillLogs.push({
-        skill_name: step,
-        status: "failed",
-        output_preview: truncate(error instanceof Error ? error.message : "stage failed")
-      });
-      throw error;
-    }
-  };
-
-  // Stage order is intentionally linear: extract signal -> structure narrative -> design -> audit -> finalize.
-  await run("skill_01_distiller", 8, skill01Distiller);
-  const forceTrendIntel = shouldForceTrendIntel(enrichedRequest.contentMode);
-  if ((appConfig.pipeline.enableSourceIntel || !isFastMode || forceTrendIntel) && !isTimedOut()) {
-    await run("skill_14_source_grounder", 12, skill14SourceGrounder);
-    await run("skill_15_trend_miner", 14, skill15TrendMiner);
-  } else {
-    await pushSkipLog("skill_14_source_grounder", 12, isTimedOut() ? "pipeline_budget" : "fast_mode");
-    await pushSkipLog("skill_15_trend_miner", 14, isTimedOut() ? "pipeline_budget" : "fast_mode");
-  }
-  await run("skill_02_hook_architect", 18, skill02HookArchitect);
-  await run("skill_03_script_splitter", 24, skill03ScriptSplitter);
-  if ((appConfig.pipeline.enableStoryboardQuality || !isFastMode) && !isTimedOut()) {
-    try {
-      const quality = await runStoryboardQualityLoop(context);
-      context = quality.context;
-      await pushQualityLog(quality.report.step, "completed", quality.report.summary, 28);
-    } catch (error) {
-      await pushQualityLog(
-        "quality_storyboard_loop",
-        "failed",
-        error instanceof Error ? error.message : "storyboard quality loop failed",
-        28
-      );
-    }
-  } else {
-    await pushSkipLog("quality_storyboard_loop", 28, isTimedOut() ? "pipeline_budget" : "fast_mode");
-  }
-  await run("skill_04_metaphorist", 32, skill04Metaphorist);
-  await run("skill_05_layout_selector", 40, skill05LayoutSelector);
-  await run("skill_06_hierarchy_mapper", 48, skill06HierarchyMapper);
-  if ((appConfig.pipeline.enableStyleRecommender || !isFastMode || context.request.contentMode === "longform_digest") && !isTimedOut()) {
-    await run("skill_13_style_recommender", 56, skill13StyleRecommender);
-  } else {
-    await pushSkipLog("skill_13_style_recommender", 56, isTimedOut() ? "pipeline_budget" : "fast_mode");
-  }
-  await run("skill_07_style_mapper", 62, skill07StyleMapper);
-  await run("skill_08_asset_generator", 74, skill08AssetGenerator);
-  const imageQualityLoopDecision = decideImageQualityLoopExecution(context, { fastMode: isFastMode });
-  if (!isTimedOut() && imageQualityLoopDecision.shouldRun) {
-    try {
-      const quality = await runImageQualityLoop(context);
-      context = quality.context;
-      await pushQualityLog(quality.report.step, "completed", quality.report.summary, 78);
-    } catch (error) {
-      await pushQualityLog(
-        "quality_image_loop",
-        "failed",
-        error instanceof Error ? error.message : "image quality loop failed",
-        78
-      );
-    }
-  } else {
-    await pushSkipLog(
-      "quality_image_loop",
-      78,
-      isTimedOut() ? "pipeline_budget" : imageQualityLoopDecision.reason
-    );
-  }
-  await run("skill_09_typographer", 84, skill09Typographer);
-  await run("skill_10_auto_resizer", 90, skill10AutoResizer);
-  if ((appConfig.pipeline.enableAttentionAuditor || !isFastMode) && !isTimedOut()) {
-    await run("skill_11_attention_auditor", 96, skill11AttentionAuditor);
-  } else {
-    await pushSkipLog("skill_11_attention_auditor", 96, isTimedOut() ? "pipeline_budget" : "fast_mode");
-  }
-  if ((appConfig.pipeline.enableAttentionFixer || !isFastMode) && !isTimedOut()) {
-    await run("skill_16_attention_fixer", 97, skill16AttentionFixer);
-  } else {
-    await pushSkipLog("skill_16_attention_fixer", 97, isTimedOut() ? "pipeline_budget" : "fast_mode");
-  }
-  await run("skill_12_viral_optimizer", 99, skill12ViralOptimizer);
-
+function buildBaseResult(context: ConversionContext, skillLogs: ConversionResult["skill_logs"]): ConversionResult {
   const aspectRatio = context.request.aspectRatios[0] ?? "4:5";
   const normalizedHashtags = normalizeHashtags(context.hashtags, 5);
   const defaultHashtags = fallbackHashtags(context.request.inputText);
@@ -385,8 +168,7 @@ export async function runConversion(
     logo_url: context.request.brand.logoUrl
   };
 
-  // Convert internal context into API-facing result payload.
-  let result: ConversionResult = {
+  return {
     post_title: context.hooks[0] ?? context.request.sourceTitle ?? context.corePoints[0] ?? "clawvisual AI Result",
     post_caption: context.caption || truncate(context.corePoints.join(" "), 500),
     hashtags,
@@ -421,71 +203,147 @@ export async function runConversion(
     skill_logs: skillLogs,
     aspect_ratio: aspectRatio
   };
+}
 
-  if ((appConfig.pipeline.enablePostCopyQuality || !isFastMode) && !isTimedOut()) {
-    try {
-      const quality = await runPostCopyQualityLoop({
-        result,
-        sourceText: context.request.inputText,
-        outputLanguage: context.request.outputLanguage
-      });
-      result = quality.result;
-      await pushQualityLog(quality.report.step, "completed", quality.report.summary, 99);
-    } catch (error) {
-      await pushQualityLog(
-        "quality_post_copy_loop",
-        "failed",
-        error instanceof Error ? error.message : "post copy quality loop failed",
-        99
-      );
+function stageProgress(index: number, total: number): number {
+  if (total <= 0) return 99;
+  return Math.max(5, Math.min(99, Math.round(((index + 1) / total) * 99)));
+}
+
+export async function runConversion(
+  request: ConversionRequest,
+  onProgress?: ProgressCallback
+): Promise<ConversionResult> {
+  const usageScope = beginUsageScope();
+  const startedAt = Date.now();
+  const pipelineMaxMs = Math.max(120000, Number(appConfig.pipeline.maxDurationMs || 300000));
+  const deadlineAt = startedAt + pipelineMaxMs;
+  const isTimedOut = () => Date.now() >= deadlineAt;
+  const pipelineMode = appConfig.pipeline.mode === "fast" ? "fast" : "full";
+  const stagePlan = resolveContentPipeline(request.contentMode)[pipelineMode];
+
+  const skillLogs: ConversionResult["skill_logs"] = [];
+  let activeRequest = request;
+  let context: ConversionContext | null = null;
+  let result: ConversionResult | null = null;
+
+  const ensureContext = () => {
+    if (!context) {
+      throw new Error("Pipeline error: conversion context is not initialized.");
     }
-  } else {
-    await pushSkipLog("quality_post_copy_loop", 99, isTimedOut() ? "pipeline_budget" : "fast_mode");
-  }
+    return context;
+  };
 
-  try {
-    const polished = await runCopyPolishLoop({
-      result,
-      sourceText: context.request.inputText,
-      outputLanguage: context.request.outputLanguage
-    });
-    result = polished.result;
-    await pushQualityLog(polished.report.step, "completed", polished.report.summary, 99);
-  } catch (error) {
-    await pushQualityLog(
-      "quality_copy_polish",
-      "failed",
-      error instanceof Error ? error.message : "copy polish failed",
-      99
-    );
-  }
+  const ensureResult = () => {
+    if (result) return result;
+    const currentContext = ensureContext();
+    result = buildBaseResult(currentContext, skillLogs);
+    return result;
+  };
 
-  if ((appConfig.pipeline.enableFinalAudit || !isFastMode) && !isTimedOut()) {
-    try {
-      const finalAudit = await runFinalAuditRecovery({
-        result,
-        sourceText: context.request.inputText,
-        outputLanguage: context.request.outputLanguage
-      });
-      result = finalAudit.result;
-      await pushQualityLog(finalAudit.report.step, "completed", finalAudit.report.summary, 100);
-    } catch (error) {
-      await pushQualityLog(
-        "quality_final_audit",
-        "failed",
-        error instanceof Error ? error.message : "final audit failed",
-        100
-      );
+  for (let index = 0; index < stagePlan.length; index += 1) {
+    const stage = stagePlan[index];
+    if (isTimedOut() && stage.startsWith("skill_quality_")) {
+      break;
     }
-  } else {
-    await pushSkipLog("quality_final_audit", 100, isTimedOut() ? "pipeline_budget" : "fast_mode");
+
+    const progress = stageProgress(index, stagePlan.length);
+    try {
+      let outputPreview = "";
+
+      switch (stage) {
+        case "skill_input_processor": {
+          activeRequest = await skillInputProcessor(activeRequest);
+          context = createInitialContext(activeRequest);
+          outputPreview = truncate(
+            `mode=${activeRequest.contentMode} source=${activeRequest.sourceType ?? "text"} title=${activeRequest.sourceTitle ?? "n/a"} chars=${activeRequest.inputText.length}`
+          );
+          break;
+        }
+        case "skill_content_planner": {
+          context = await skillContentPlanner(ensureContext());
+          outputPreview = buildCoreSkillPreview(stage, ensureContext());
+          break;
+        }
+        case "skill_visual_prompt_planner": {
+          context = await skillVisualPromptPlanner(ensureContext());
+          outputPreview = buildCoreSkillPreview(stage, ensureContext());
+          break;
+        }
+        case "skill_asset_generator": {
+          context = await skillAssetGenerator(ensureContext());
+          outputPreview = buildCoreSkillPreview(stage, ensureContext());
+          break;
+        }
+        case "skill_viral_optimizer": {
+          context = await skillViralOptimizer(ensureContext());
+          outputPreview = buildCoreSkillPreview(stage, ensureContext());
+          break;
+        }
+        case "skill_quality_post_copy_loop": {
+          const quality = await runPostCopyQualityLoop({
+            result: ensureResult(),
+            sourceText: activeRequest.inputText,
+            outputLanguage: activeRequest.outputLanguage
+          });
+          result = { ...quality.result, skill_logs: skillLogs };
+          outputPreview = truncate(quality.report.summary, 220);
+          break;
+        }
+        case "skill_quality_copy_polish": {
+          const polished = await runCopyPolishLoop({
+            result: ensureResult(),
+            sourceText: activeRequest.inputText,
+            outputLanguage: activeRequest.outputLanguage
+          });
+          result = { ...polished.result, skill_logs: skillLogs };
+          outputPreview = truncate(polished.report.summary, 220);
+          break;
+        }
+        case "skill_quality_final_audit": {
+          const finalAudit = await runFinalAuditRecovery({
+            result: ensureResult(),
+            sourceText: activeRequest.inputText,
+            outputLanguage: activeRequest.outputLanguage
+          });
+          result = { ...finalAudit.result, skill_logs: skillLogs };
+          outputPreview = truncate(finalAudit.report.summary, 220);
+          break;
+        }
+        case "skill_quality_image_loop": {
+          throw new Error("skill_quality_image_loop is not implemented yet.");
+        }
+        default: {
+          throw new Error(`Unknown pipeline stage: ${stage}`);
+        }
+      }
+
+      skillLogs.push({
+        skill_name: stage,
+        status: "completed",
+        output_preview: outputPreview
+      });
+      if (onProgress) {
+        await onProgress(stage, progress, outputPreview);
+      }
+    } catch (error) {
+      const message = truncate(error instanceof Error ? error.message : "stage failed", 220);
+      skillLogs.push({
+        skill_name: stage,
+        status: "failed",
+        output_preview: message
+      });
+      throw error;
+    }
   }
 
-  if (context.request.reviewMode === "required" && !isTimedOut()) {
+  result = ensureResult();
+
+  if (activeRequest.reviewMode === "required" && !isTimedOut()) {
     try {
       const review = await runCoverReviewPack({
         result,
-        sourceText: context.request.inputText
+        sourceText: activeRequest.inputText
       });
       result.review = review;
     } catch (error) {
@@ -501,15 +359,16 @@ export async function runConversion(
     };
   }
 
-  // Enforce public output constraints regardless of upstream skill behavior.
+  const finalContext = ensureContext();
   result = {
     ...result,
     post_title: toSingleSentence(result.post_title) || "核心结论在第1页",
     post_caption: normalizeCaptionLength(
       result.post_caption,
-      [context.corePoints.slice(0, 4).join(" "), context.cta].filter(Boolean).join(" ")
+      [finalContext.corePoints.slice(0, 4).join(" "), finalContext.cta].filter(Boolean).join(" ")
     ),
-    hashtags: normalizeHashtags(result.hashtags, 5)
+    hashtags: normalizeHashtags(result.hashtags, 5),
+    skill_logs: skillLogs
   };
 
   const usageSummary = formatUsageSummary(snapshotUsage(usageScope));
@@ -521,6 +380,8 @@ export async function runConversion(
   if (onProgress) {
     await onProgress("llm_usage_summary", 100, truncate(usageSummary, 220));
   }
+  result.skill_logs = skillLogs;
 
   return result;
 }
+

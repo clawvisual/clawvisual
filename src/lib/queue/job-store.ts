@@ -348,90 +348,50 @@ function maybeApplyFallbackTitle(sessionId: string, inputText: string): void {
 
 function describeStage(stage: string): { title: string; thought: string; action: string } {
   const stageMap: Record<string, { title: string; thought: string; action: string }> = {
-    skill_00_input_processor: {
+    skill_input_processor: {
       title: "parse user input",
       thought: "Classify whether input is text, url, or mixed text+url before downstream skills.",
       action: "Use LLM-based parser, fetch URL markdown, and output normalized pure text."
     },
-    skill_01_distiller: {
-      title: "distill core ideas",
-      thought: "Find the smallest set of high-signal points from long-form content.",
-      action: "Extract 1-8 core points and remove redundant details."
+    skill_content_planner: {
+      title: "plan content cards",
+      thought: "Long-form text should be transformed into compact slide cards with clear hierarchy.",
+      action: "Generate title/caption/hashtags and 1-8 slide card plans."
     },
-    skill_14_source_grounder: {
-      title: "ground sources",
-      thought: "Evidence quality should be checked before copy and visual generation.",
-      action: "Collect and rank source references by credibility and relevance."
+    skill_visual_prompt_planner: {
+      title: "plan visual prompts",
+      thought: "Image prompts should align with card copy and maintain one coherent style.",
+      action: "Create one prompt per slide with structured infographic constraints."
     },
-    skill_02_hook_architect: {
-      title: "generate hooks",
-      thought: "The first slide needs click-worthy title candidates for social distribution.",
-      action: "Create multiple hook styles: controversy, question, and benefit-led."
-    },
-    skill_03_script_splitter: {
-      title: "split storyboard",
-      thought: "Each card must stay short and readable while preserving narrative flow.",
-      action: "Split content into ordered slide scripts with compact wording."
-    },
-    skill_04_metaphorist: {
-      title: "map metaphors",
-      thought: "Abstract statements should be turned into concrete visual anchors.",
-      action: "Attach one visual metaphor prompt per slide."
-    },
-    skill_05_layout_selector: {
-      title: "choose layouts",
-      thought: "Different semantics require different spatial structures.",
-      action: "Select template types like cover, list, steps, quote, or data."
-    },
-    skill_06_hierarchy_mapper: {
-      title: "define hierarchy",
-      thought: "Typography weight and scale depend on semantic hierarchy labels.",
-      action: "Generate heading/subheading/body and highlight keywords."
-    },
-    skill_07_style_mapper: {
-      title: "apply style system",
-      thought: "Slides must remain visually consistent across the full set.",
-      action: "Build theme tokens from style preset and optional brand palette."
-    },
-    skill_13_style_recommender: {
-      title: "recommend visual style",
-      thought: "Source topic should drive a coherent visual language before image prompt generation.",
-      action: "Infer domain and recommend global style preset, tone, and positive/negative style keywords."
-    },
-    skill_08_asset_generator: {
+    skill_asset_generator: {
       title: "generate assets",
       thought: "Background imagery should reinforce the message without reducing readability.",
       action: "Generate image prompts and produce per-slide asset URLs."
     },
-    skill_09_typographer: {
-      title: "compose layout",
-      thought: "Text and visuals need safe-area composition for final readability.",
-      action: "Compose slide payloads with heading/body and selected template."
-    },
-    skill_10_auto_resizer: {
-      title: "resize formats",
-      thought: "Output needs cross-platform ratios for social distribution.",
-      action: "Adapt all slides into 4:5, 1:1, 9:16, and 16:9 variants."
-    },
-    skill_11_attention_auditor: {
-      title: "audit attention",
-      thought: "Before export, check readability, overlap risk, and contrast.",
-      action: "Score each slide and flag high-risk readability cards."
-    },
-    skill_16_attention_fixer: {
-      title: "repair readability",
-      thought: "Risky slides should be regenerated with stronger contrast-safe composition.",
-      action: "Apply overlay/contrast fixes and regenerate affected images."
-    },
-    skill_15_trend_miner: {
-      title: "mine trend tags",
-      thought: "Distribution quality depends on current topic tags, not static hashtags.",
-      action: "Infer momentum tags from external signals and source context."
-    },
-    skill_12_viral_optimizer: {
+    skill_viral_optimizer: {
       title: "optimize CTA",
       thought: "A strong CTA increases saves, comments, and share behavior.",
       action: "Generate final conversion-oriented CTA copy."
+    },
+    skill_quality_post_copy_loop: {
+      title: "quality check copy",
+      thought: "Before final output, copy consistency and constraint alignment should be verified.",
+      action: "Run post-copy quality loop and apply safe rewrites when needed."
+    },
+    skill_quality_copy_polish: {
+      title: "polish copy",
+      thought: "Caption readability and flow should be improved without changing intent.",
+      action: "Apply final copy polishing on title, caption, and hashtags."
+    },
+    skill_quality_final_audit: {
+      title: "final audit",
+      thought: "Final output needs one last quality gate for release readiness.",
+      action: "Run final audit and recovery pass."
+    },
+    llm_usage_summary: {
+      title: "usage summary",
+      thought: "Token and model usage should be transparent after each run.",
+      action: "Aggregate LLM usage metrics for the whole pipeline."
     }
   };
 
@@ -498,6 +458,19 @@ export function deleteSession(id: string): boolean {
   return true;
 }
 
+export function clearAllSessions(): { deletedSessions: number; deletedJobs: number } {
+  const deletedSessions = sessions.size;
+  const deletedJobs = jobs.size;
+
+  sessions.clear();
+  sessionJobs.clear();
+  jobs.clear();
+  shares.clear();
+
+  persistState();
+  return { deletedSessions, deletedJobs };
+}
+
 export function listSessionJobs(sessionId: string): JobRecord[] {
   const ids = sessionJobs.get(sessionId) ?? [];
   const collected = ids
@@ -559,7 +532,9 @@ function pushProgressEventFactory(jobId: string) {
 
 function parseFinalAuditScore(result: JobRecord["result"]): number | undefined {
   if (!result) return undefined;
-  const log = [...result.skill_logs].reverse().find((item) => item.skill_name === "quality_final_audit");
+  const log = [...result.skill_logs].reverse().find((item) =>
+    item.skill_name === "skill_quality_final_audit" || item.skill_name === "quality_final_audit"
+  );
   if (!log) return undefined;
   const text = String(log.output_preview ?? "");
   const matches = Array.from(text.matchAll(/avg=(\d{1,3})/g));

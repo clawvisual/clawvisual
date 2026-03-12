@@ -15,62 +15,39 @@ import type {
 } from "@/lib/types/job";
 
 const SKILL_ORDER = [
-  "skill_00_input_processor",
-  "skill_01_distiller",
-  "skill_14_source_grounder",
-  "skill_15_trend_miner",
-  "skill_02_hook_architect",
-  "skill_03_script_splitter",
-  "skill_04_metaphorist",
-  "skill_05_layout_selector",
-  "skill_06_hierarchy_mapper",
-  "skill_13_style_recommender",
-  "skill_07_style_mapper",
-  "skill_08_asset_generator",
-  "skill_09_typographer",
-  "skill_10_auto_resizer",
-  "skill_11_attention_auditor",
-  "skill_16_attention_fixer",
-  "skill_12_viral_optimizer"
+  "skill_input_processor",
+  "skill_content_planner",
+  "skill_visual_prompt_planner",
+  "skill_asset_generator",
+  "skill_viral_optimizer",
+  "skill_quality_post_copy_loop",
+  "skill_quality_copy_polish",
+  "skill_quality_final_audit"
 ] as const;
 
 // Dependency graph used to preserve provenance and recompute scope for artifacts.
 const SKILL_DEP_GRAPH: Record<string, string[]> = {
-  skill_00_input_processor: [],
-  skill_01_distiller: ["skill_00_input_processor"],
-  skill_14_source_grounder: ["skill_01_distiller"],
-  skill_15_trend_miner: ["skill_14_source_grounder"],
-  skill_02_hook_architect: ["skill_15_trend_miner"],
-  skill_03_script_splitter: ["skill_02_hook_architect"],
-  skill_04_metaphorist: ["skill_03_script_splitter"],
-  skill_05_layout_selector: ["skill_04_metaphorist"],
-  skill_06_hierarchy_mapper: ["skill_05_layout_selector"],
-  skill_13_style_recommender: ["skill_06_hierarchy_mapper"],
-  skill_07_style_mapper: ["skill_13_style_recommender"],
-  skill_08_asset_generator: ["skill_07_style_mapper", "skill_13_style_recommender"],
-  skill_09_typographer: ["skill_08_asset_generator"],
-  skill_10_auto_resizer: ["skill_09_typographer"],
-  skill_11_attention_auditor: ["skill_10_auto_resizer"],
-  skill_16_attention_fixer: ["skill_11_attention_auditor"],
-  skill_12_viral_optimizer: ["skill_16_attention_fixer", "skill_15_trend_miner"]
+  skill_input_processor: [],
+  skill_content_planner: ["skill_input_processor"],
+  skill_visual_prompt_planner: ["skill_content_planner"],
+  skill_asset_generator: ["skill_visual_prompt_planner"],
+  skill_viral_optimizer: ["skill_asset_generator"],
+  skill_quality_post_copy_loop: ["skill_viral_optimizer"],
+  skill_quality_copy_polish: ["skill_quality_post_copy_loop", "skill_viral_optimizer"],
+  skill_quality_final_audit: ["skill_quality_copy_polish"]
 };
 
 const COPY_STYLE_SKILLS = [
-  "skill_01_distiller",
-  "skill_14_source_grounder",
-  "skill_02_hook_architect",
-  "skill_03_script_splitter",
-  "skill_09_typographer",
-  "skill_15_trend_miner",
-  "skill_12_viral_optimizer"
+  "skill_content_planner",
+  "skill_viral_optimizer",
+  "skill_quality_copy_polish"
 ];
 
-const TITLE_ARTIFACT_ID = "skill_02_hook_architect:title";
-const SCRIPT_ARTIFACT_ID = "skill_03_script_splitter:slides";
-const TYPOGRAPHY_ARTIFACT_ID = "skill_09_typographer:composition";
-const CAPTION_ARTIFACT_ID = "skill_12_viral_optimizer:caption";
-const DISTILLER_ARTIFACT_ID = "skill_01_distiller:source";
-const STYLE_RECOMMENDER_ARTIFACT_ID = "skill_13_style_recommender:profile";
+const SOURCE_ARTIFACT_ID = "skill_input_processor:source";
+const TITLE_ARTIFACT_ID = "skill_content_planner:title";
+const SCRIPT_ARTIFACT_ID = "skill_content_planner:slides";
+const VISUAL_PROMPT_ARTIFACT_ID = "skill_visual_prompt_planner:prompts";
+const CAPTION_ARTIFACT_ID = "skill_viral_optimizer:caption";
 
 type RevisionEngineParams = {
   jobId: string;
@@ -162,19 +139,17 @@ function mergeArtifacts(previousArtifacts: SkillArtifact[], updates: SkillArtifa
 }
 
 function toAssetArtifactId(slideId: number): string {
-  return `skill_08_asset_generator:slide:${slideId}`;
+  return `skill_asset_generator:slide:${slideId}`;
 }
 
 export function planRerun(intent: ReviseIntent, preserveLayout: boolean): RerunPlan {
   // Select the minimal skill subset required by the requested revision intent.
+  void preserveLayout;
   let selectedSkills: string[] = [];
   if (intent === "rewrite_copy_style") {
     selectedSkills = [...COPY_STYLE_SKILLS];
   } else if (intent === "regenerate_cover" || intent === "regenerate_slides") {
-    selectedSkills = ["skill_08_asset_generator"];
-    if (!preserveLayout) {
-      selectedSkills.push("skill_09_typographer");
-    }
+    selectedSkills = ["skill_asset_generator"];
   }
 
   const reusedSkills = SKILL_ORDER.filter((item) => !selectedSkills.includes(item));
@@ -200,8 +175,8 @@ export function buildArtifactsForGenerate(params: {
 
   artifacts.push(
     createArtifact({
-      artifactId: DISTILLER_ARTIFACT_ID,
-      skillName: "skill_01_distiller",
+      artifactId: SOURCE_ARTIFACT_ID,
+      skillName: "skill_input_processor",
       output: {
         source_excerpt: params.inputText.slice(0, 800)
       },
@@ -218,28 +193,8 @@ export function buildArtifactsForGenerate(params: {
 
   artifacts.push(
     createArtifact({
-      artifactId: STYLE_RECOMMENDER_ARTIFACT_ID,
-      skillName: "skill_13_style_recommender",
-      output: {
-        visual_style_profile: (params.result.skill_logs.find((log) => log.skill_name === "skill_13_style_recommender")
-          ?.output_preview ?? "n/a")
-      },
-      inputHashPayload: {
-        style_recommender_preview: params.result.skill_logs.find((log) => log.skill_name === "skill_13_style_recommender")
-          ?.output_preview
-      },
-      revision: params.revision,
-      previousArtifacts: existingArtifacts,
-      jobId: params.jobId,
-      baseJobId: params.baseJobId,
-      parentJobId: params.parentJobId
-    })
-  );
-
-  artifacts.push(
-    createArtifact({
       artifactId: TITLE_ARTIFACT_ID,
-      skillName: "skill_02_hook_architect",
+      skillName: "skill_content_planner",
       output: { post_title: params.result.post_title },
       inputHashPayload: {
         title: params.result.post_title
@@ -255,7 +210,7 @@ export function buildArtifactsForGenerate(params: {
   artifacts.push(
     createArtifact({
       artifactId: SCRIPT_ARTIFACT_ID,
-      skillName: "skill_03_script_splitter",
+      skillName: "skill_content_planner",
       output: {
         slides: params.result.slides.map((slide) => ({
           slide_id: slide.slide_id,
@@ -278,18 +233,18 @@ export function buildArtifactsForGenerate(params: {
 
   artifacts.push(
     createArtifact({
-      artifactId: TYPOGRAPHY_ARTIFACT_ID,
-      skillName: "skill_09_typographer",
+      artifactId: VISUAL_PROMPT_ARTIFACT_ID,
+      skillName: "skill_visual_prompt_planner",
       output: {
         slides: params.result.slides.map((slide) => ({
           slide_id: slide.slide_id,
-          layout_template: slide.layout_template
+          visual_prompt: slide.visual_prompt
         }))
       },
       inputHashPayload: {
         slides: params.result.slides.map((slide) => ({
           slide_id: slide.slide_id,
-          layout_template: slide.layout_template
+          visual_prompt: slide.visual_prompt
         }))
       },
       revision: params.revision,
@@ -303,7 +258,7 @@ export function buildArtifactsForGenerate(params: {
   artifacts.push(
     createArtifact({
       artifactId: CAPTION_ARTIFACT_ID,
-      skillName: "skill_12_viral_optimizer",
+      skillName: "skill_viral_optimizer",
       output: {
         post_caption: params.result.post_caption,
         hashtags: params.result.hashtags
@@ -324,7 +279,7 @@ export function buildArtifactsForGenerate(params: {
     artifacts.push(
       createArtifact({
         artifactId: toAssetArtifactId(slide.slide_id),
-        skillName: "skill_08_asset_generator",
+        skillName: "skill_asset_generator",
         output: {
           slide_id: slide.slide_id,
           visual_prompt: slide.visual_prompt,
@@ -578,8 +533,8 @@ export async function runRevisionEngine(params: RevisionEngineParams): Promise<R
   if (params.revise.intent === "rewrite_copy_style") {
     updatedArtifacts.push(
       createArtifact({
-        artifactId: DISTILLER_ARTIFACT_ID,
-        skillName: "skill_01_distiller",
+        artifactId: SOURCE_ARTIFACT_ID,
+        skillName: "skill_input_processor",
         output: {
           source_excerpt: params.revise.sourceText.slice(0, 800),
           instruction: params.revise.instruction
@@ -599,7 +554,7 @@ export async function runRevisionEngine(params: RevisionEngineParams): Promise<R
     updatedArtifacts.push(
       createArtifact({
         artifactId: TITLE_ARTIFACT_ID,
-        skillName: "skill_02_hook_architect",
+        skillName: "skill_content_planner",
         output: {
           post_title: revisedResult.post_title
         },
@@ -618,7 +573,7 @@ export async function runRevisionEngine(params: RevisionEngineParams): Promise<R
     updatedArtifacts.push(
       createArtifact({
         artifactId: SCRIPT_ARTIFACT_ID,
-        skillName: "skill_03_script_splitter",
+        skillName: "skill_content_planner",
         output: {
           slides: revisedResult.slides.map((slide) => ({
             slide_id: slide.slide_id,
@@ -642,13 +597,12 @@ export async function runRevisionEngine(params: RevisionEngineParams): Promise<R
     );
     updatedArtifacts.push(
       createArtifact({
-        artifactId: TYPOGRAPHY_ARTIFACT_ID,
-        skillName: "skill_09_typographer",
+        artifactId: VISUAL_PROMPT_ARTIFACT_ID,
+        skillName: "skill_visual_prompt_planner",
         output: {
           slides: revisedResult.slides.map((slide) => ({
             slide_id: slide.slide_id,
-            layout_template: slide.layout_template,
-            content_quote: slide.content_quote
+            visual_prompt: slide.visual_prompt
           }))
         },
         inputHashPayload: {
@@ -666,7 +620,7 @@ export async function runRevisionEngine(params: RevisionEngineParams): Promise<R
     updatedArtifacts.push(
       createArtifact({
         artifactId: CAPTION_ARTIFACT_ID,
-        skillName: "skill_12_viral_optimizer",
+        skillName: "skill_viral_optimizer",
         output: {
           post_caption: revisedResult.post_caption,
           hashtags: revisedResult.hashtags
@@ -699,7 +653,7 @@ export async function runRevisionEngine(params: RevisionEngineParams): Promise<R
       updatedArtifacts.push(
         createArtifact({
           artifactId: toAssetArtifactId(slide.slide_id),
-          skillName: "skill_08_asset_generator",
+          skillName: "skill_asset_generator",
           output: {
             slide_id: slide.slide_id,
             visual_prompt: slide.visual_prompt,

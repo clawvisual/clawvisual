@@ -32,7 +32,7 @@ const convertArgsSchema = z.object({
   style_preset: z.string().default("auto"),
   tone: z.string().default("auto"),
   generation_mode: z.enum(["standard", "quote_slides"]).default("quote_slides"),
-  content_mode: z.enum(["longform_digest", "product_marketing", "trend_hotspot"]).default("longform_digest"),
+  content_mode: z.enum(["longform_digest"]).default("longform_digest"),
   output_language: z.string().default("en-US"),
   review_mode: z.enum(["auto", "required"]).default("auto")
 }).transform((value) => ({
@@ -82,7 +82,7 @@ const TOOL_DEFINITIONS = [
           type: "string",
           minLength: 8,
           description:
-            "Input URL or text. For longform_digest/product_marketing, 20+ chars is recommended. trend_hotspot supports shorter input."
+            "Input URL or text. For longform_digest mode, 20+ chars is recommended."
         },
         max_slides: {
           type: "integer",
@@ -106,7 +106,7 @@ const TOOL_DEFINITIONS = [
         generation_mode: { type: "string", enum: ["standard", "quote_slides"], default: "quote_slides" },
         content_mode: {
           type: "string",
-          enum: ["longform_digest", "product_marketing", "trend_hotspot"],
+          enum: ["longform_digest"],
           default: "longform_digest"
         },
         output_language: { type: "string", default: "en-US" },
@@ -224,10 +224,10 @@ async function handleToolCall(params: ToolCallRequest) {
 
     const payload = parsed.data;
     const contentMode = normalizeContentMode(payload.content_mode);
-    if (contentMode !== "trend_hotspot" && payload.input_text.trim().length < 20) {
+    if (payload.input_text.trim().length < 20) {
       return toolResult(
         {
-          error: "input_text should be at least 20 chars for longform_digest or product_marketing mode"
+          error: "input_text should be at least 20 chars for longform_digest mode"
         },
         true
       );

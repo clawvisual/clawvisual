@@ -32,7 +32,7 @@ export function createOpenApiDocument() {
               type: "string",
               minLength: 8,
               description:
-                "Input URL or text. For longform_digest/product_marketing, 20+ chars is recommended. trend_hotspot supports shorter input."
+                "Input URL or text. For longform_digest mode, 20+ chars is recommended."
             },
             max_slides: {
               type: "integer",
@@ -61,9 +61,9 @@ export function createOpenApiDocument() {
             },
             content_mode: {
               type: "string",
-              enum: ["longform_digest", "product_marketing", "trend_hotspot"],
+              enum: ["longform_digest"],
               default: "longform_digest",
-              description: "Business objective mode: digest, conversion, or trend hotspot."
+              description: "Business objective mode."
             },
             review_mode: {
               type: "string",

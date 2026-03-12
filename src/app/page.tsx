@@ -349,6 +349,7 @@ export default function HomePage() {
   const [historyMenuPosition, setHistoryMenuPosition] = useState<HistoryMenuPosition | null>(null);
   const [renamingSessionId, setRenamingSessionId] = useState("");
   const [renameDraft, setRenameDraft] = useState("");
+  const [clearingAllSessions, setClearingAllSessions] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
@@ -1146,6 +1147,36 @@ export default function HomePage() {
     }
   };
 
+  const handleClearAllSessions = async () => {
+    if (!sessionHistory.length || clearingAllSessions) return;
+    const shouldDelete = window.confirm("Delete all chat sessions?");
+    if (!shouldDelete) return;
+
+    setClearingAllSessions(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/v1/sessions", {
+        method: "DELETE"
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error ?? `Delete all failed: ${response.status}`);
+      }
+
+      setHistoryMenuSessionId("");
+      setHistoryMenuPosition(null);
+      setRenamingSessionId("");
+      setRenameDraft("");
+      setSessionHistory([]);
+      resetConversation();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Delete all sessions failed");
+    } finally {
+      setClearingAllSessions(false);
+    }
+  };
+
   const resetConversation = () => {
     pollingVersionRef.current += 1;
     setSessionId("");
@@ -1702,7 +1733,19 @@ export default function HomePage() {
 
           {!sidebarCollapsed ? (
             <section className="vf-history">
-              <p className="vf-history-title">Your chats</p>
+              <div className="vf-history-header">
+                <p className="vf-history-title">Your chats</p>
+                {sessionHistory.length ? (
+                  <button
+                    type="button"
+                    className="vf-history-clear-btn"
+                    onClick={() => void handleClearAllSessions()}
+                    disabled={clearingAllSessions}
+                  >
+                    {clearingAllSessions ? "Clearing..." : "Clear all"}
+                  </button>
+                ) : null}
+              </div>
               <div className="vf-history-list">
                 {sessionHistory.length ? (
                   sessionHistory.map((item) => (

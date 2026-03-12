@@ -17,7 +17,7 @@ const convertSchema = z.object({
   tone: z.string().default("auto"),
   output_language: z.string().trim().default(DEFAULT_LANGUAGE).transform((value) => normalizeLanguage(value)),
   generation_mode: z.enum(["standard", "quote_slides"]).default("quote_slides"),
-  content_mode: z.enum(["longform_digest", "product_marketing", "trend_hotspot"]).default("longform_digest"),
+  content_mode: z.enum(["longform_digest"]).default("longform_digest"),
   review_mode: z.enum(["auto", "required"]).default("auto")
 }).transform((value) => ({
   ...value,
@@ -47,9 +47,9 @@ export async function POST(request: Request) {
 
   const payload = parsed.data;
   const contentMode = normalizeContentMode(payload.content_mode);
-  if (contentMode !== "trend_hotspot" && payload.input_text.trim().length < 20) {
+  if (payload.input_text.trim().length < 20) {
     return NextResponse.json(
-      { error: "input_text should be at least 20 chars for longform_digest or product_marketing mode" },
+      { error: "input_text should be at least 20 chars for longform_digest mode" },
       { status: 400 }
     );
   }

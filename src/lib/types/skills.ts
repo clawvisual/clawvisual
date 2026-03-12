@@ -5,15 +5,11 @@ export type PlatformType = "RedBook" | "Twitter" | "Instagram" | "TikTok" | "Lin
 export type SkillStatus = "running" | "completed" | "failed";
 
 export const CONTENT_MODE_OPTIONS: ContentMode[] = [
-  "longform_digest",
-  "product_marketing",
-  "trend_hotspot"
+  "longform_digest"
 ];
 
 export function normalizeContentMode(value?: string): ContentMode {
-  if (value === "product_marketing" || value === "trend_hotspot" || value === "longform_digest") {
-    return value;
-  }
+  void value;
   return "longform_digest";
 }
 
@@ -37,6 +33,28 @@ export interface BrandConfig {
 export interface SlideScript {
   index: number;
   script: string;
+}
+
+export interface SlideCard {
+  title: string;
+  sentence: string;
+}
+
+export interface SlideCardPlan {
+  index: number;
+  heading: string;
+  summary: string;
+  cards: SlideCard[];
+}
+
+export interface AssetPromptPlan {
+  index: number;
+  prompt: string;
+  lockedTexts: string[];
+  styleTag?: string;
+  diagramType?: DiagramType;
+  negativeSpaceArea?: "top" | "left" | "right" | "bottom" | "center";
+  negativeKeywords?: string[];
 }
 
 export interface SlideVisual {
@@ -141,9 +159,11 @@ export interface ConversionContext {
   corePoints: string[];
   hooks: string[];
   storyboard: SlideScript[];
+  slideCardPlans: SlideCardPlan[];
   visuals: SlideVisual[];
   visualStyleProfile: VisualStyleProfile;
   theme: ThemeTokens;
+  assetPromptPlans: AssetPromptPlan[];
   assets: Array<{
     index: number;
     prompt: string;

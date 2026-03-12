@@ -378,12 +378,39 @@ textarea {
   flex: 1 1 auto;
 }
 
+.vf-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 2px;
+}
+
 .vf-history-title {
   margin: 0;
   font-size: 14px;
   color: #8d929d;
   font-weight: 600;
-  padding: 0 8px 2px;
+}
+
+.vf-history-clear-btn {
+  border: 0;
+  background: transparent;
+  color: #8d929d;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+.vf-history-clear-btn:hover:not(:disabled) {
+  color: #4b5563;
+  text-decoration: underline;
+}
+
+.vf-history-clear-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .vf-history-list {
