@@ -56,8 +56,10 @@ Generated output (`output_language: en-US`, `max_slides: 4`):
 Generated slide previews:
 
 <p>
-  <img src="screenshots/readme-cover-en.png" alt="Generated cover slide" width="49%" />
-  <img src="screenshots/readme-slide-2-en.png" alt="Generated second slide" width="49%" />
+  <img src="screenshots/slide-01-cover.png" alt="Generated cover slide" width="24%" />
+  <img src="screenshots/slide-02.png" alt="Generated second slide" width="24%" />
+  <img src="screenshots/slide-03.png" alt="Generated second slide" width="24%" />
+  <img src="screenshots/slide-04.png" alt="Generated second slide" width="24%" />
 </p>
 
 ## Quick Start (Web)
